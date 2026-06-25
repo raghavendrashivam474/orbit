@@ -3,20 +3,16 @@
  * Orbit Browser Layer - Renderer Contract
  *
  * Every rendering engine must implement this interface.
- * This is the only contract the browser layer depends on.
+ * Updated in Sprint 3 to include bounds management.
  *
- * Current implementation: WebView2Renderer
- * Future implementations: ChromiumRenderer, CEFRenderer, ServoRenderer
- *
- * See ADR-0003 for architectural rationale.
+ * The renderer receives a ContentBounds rectangle.
+ * It does not know why the bounds are what they are.
  */
 
+import type { ContentBounds } from "@/layout/LayoutTypes";
+
 export interface RendererInterface {
-  /**
-   * Navigate to the given URL.
-   * URL must be fully resolved before calling this method.
-   * Use urlResolver.ts to resolve user input first.
-   */
+  /** Navigate to the given fully-resolved URL. */
   navigate(url: string): Promise<void>;
 
   /** Reload the current page. */
@@ -25,10 +21,10 @@ export interface RendererInterface {
   /** Stop the current page load. */
   stop(): Promise<void>;
 
-  /** Navigate backward in history. No-op if unavailable. */
+  /** Navigate backward in history. */
   back(): Promise<void>;
 
-  /** Navigate forward in history. No-op if unavailable. */
+  /** Navigate forward in history. */
   forward(): Promise<void>;
 
   /** Returns the current page title. */
@@ -44,8 +40,27 @@ export interface RendererInterface {
   canGoForward(): Promise<boolean>;
 
   /**
-   * Destroy the renderer and release all associated resources.
-   * Must be called when a tab is permanently closed.
+   * Update the renderer bounds.
+   * Called whenever the content area rectangle changes.
+   * The renderer does not know why the bounds changed.
+   */
+  updateBounds(bounds: ContentBounds): Promise<void>;
+
+  /**
+   * Show the renderer.
+   * Called when switching to this tab.
+   */
+  show(): Promise<void>;
+
+  /**
+   * Hide the renderer.
+   * Called when switching away from this tab.
+   */
+  hide(): Promise<void>;
+
+  /**
+   * Destroy the renderer and release all resources.
+   * Called when a tab is permanently closed.
    */
   destroy(): Promise<void>;
 }

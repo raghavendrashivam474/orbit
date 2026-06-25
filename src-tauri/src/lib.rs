@@ -1,6 +1,6 @@
 //! lib.rs
 //! Orbit Tauri Application Library
-//! Sprint 3: Browser commands registered.
+//! Sprint 3: Child WebView browser commands registered.
 
 mod browser;
 
@@ -8,13 +8,17 @@ use browser::{
     browser_back,
     browser_can_go_back,
     browser_can_go_forward,
+    browser_create,
     browser_destroy,
     browser_forward,
     browser_get_title,
     browser_get_url,
+    browser_hide,
     browser_navigate,
     browser_reload,
+    browser_show,
     browser_stop,
+    browser_update_bounds,
 };
 
 #[tauri::command]
@@ -57,6 +61,7 @@ pub fn run() {
             maximize_window,
             close_window,
             is_window_maximized,
+            browser_create,
             browser_navigate,
             browser_reload,
             browser_stop,
@@ -66,6 +71,9 @@ pub fn run() {
             browser_get_url,
             browser_can_go_back,
             browser_can_go_forward,
+            browser_update_bounds,
+            browser_show,
+            browser_hide,
             browser_destroy,
         ])
         .setup(|app| {

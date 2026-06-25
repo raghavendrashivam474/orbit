@@ -1,4 +1,11 @@
-import { useState } from "react";
+/**
+ * Sidebar.tsx
+ * Orbit Sidebar - Controlled Component
+ *
+ * Sprint 3: Sidebar collapse state is lifted to ShellLayout
+ * so it can be used to compute content bounds.
+ */
+
 import {
   Home,
   Layers,
@@ -21,15 +28,16 @@ const NAV_ITEMS = [
   { icon: <Download size={16} strokeWidth={2} />, label: "Downloads",  path: "/downloads" },
 ] as const;
 
-export function Sidebar(): React.JSX.Element {
-  const [collapsed, setCollapsed] = useState(false);
+interface SidebarProps {
+  collapsed:         boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+}
 
+export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps): React.JSX.Element {
   return (
     <aside
       style={{
-        width: collapsed
-          ? "var(--sidebar-collapsed)"
-          : "var(--sidebar-width)",
+        width: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-width)",
       }}
       className={[
         "flex flex-col flex-shrink-0",
@@ -39,7 +47,6 @@ export function Sidebar(): React.JSX.Element {
       ].join(" ")}
       aria-label="Primary navigation"
     >
-      {/* Nav items */}
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto orbit-scrollbar">
         {NAV_ITEMS.map((item) => (
           <SidebarItem
@@ -54,7 +61,6 @@ export function Sidebar(): React.JSX.Element {
 
       <Divider />
 
-      {/* Settings */}
       <div className="p-2">
         <SidebarItem
           icon={<Settings size={16} strokeWidth={2} />}
@@ -66,11 +72,13 @@ export function Sidebar(): React.JSX.Element {
 
       <Divider />
 
-      {/* Collapse toggle */}
       <div className="p-2">
-        <Tooltip content={collapsed ? "Expand sidebar" : "Collapse sidebar"} side="right">
+        <Tooltip
+          content={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          side="right"
+        >
           <button
-            onClick={() => setCollapsed((prev) => !prev)}
+            onClick={() => onCollapsedChange(!collapsed)}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={[
               "w-full flex items-center justify-center gap-2 py-2 px-3",

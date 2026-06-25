@@ -2,13 +2,14 @@
  * ShellLayout.tsx
  * Orbit Application Shell
  *
- * Sprint 3: BrowserView integrated into content area.
- * Shell remains presentation only.
- * All browser operations flow through BrowserFacade.
+ * Sprint 3: Sidebar width is tracked here and passed
+ * down to BrowserView so it can compute content bounds.
+ * The sidebar width is the only layout input the shell provides.
  */
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { TitleBar } from "./TitleBar";
 import { TabBar } from "@/components/tabs/TabBar";
 import { Toolbar } from "@/components/toolbar/Toolbar";
@@ -19,6 +20,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useTabStore } from "@/store/tabStore";
 import { useBrowserStore } from "@/store/browserStore";
 import { browserFacade } from "@/browser/BrowserFacade";
+import { LAYOUT } from "@/layout/LayoutConstants";
 
 export function ShellLayout(): React.JSX.Element {
   useTheme();
@@ -26,13 +28,16 @@ export function ShellLayout(): React.JSX.Element {
 
   const location = useLocation();
   const { tabs, activeTabId } = useTabStore();
-  const { initTabState } = useBrowserStore();
+  const { initTabState }      = useBrowserStore();
 
-  const isHomePage     = location.pathname === "/";
-  const isSettingsPage = location.pathname === "/settings";
-  const showBrowser    = !isHomePage && !isSettingsPage;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarWidth = sidebarCollapsed
+    ? LAYOUT.SIDEBAR_COLLAPSED
+    : LAYOUT.SIDEBAR_EXPANDED;
 
-  // Register new tabs with the browser facade
+  const isShellPage = location.pathname === "/" || location.pathname === "/settings";
+
+  // Register new tabs with facade
   useEffect(() => {
     tabs.forEach((tab) => {
       const state = browserFacade.getSessionState(tab.id);
@@ -43,7 +48,7 @@ export function ShellLayout(): React.JSX.Element {
     });
   }, [tabs, initTabState]);
 
-  // Activate tab when active tab changes
+  // Activate tab on switch
   useEffect(() => {
     if (activeTabId) {
       browserFacade.activateTab(activeTabId).catch(console.warn);
@@ -57,14 +62,18 @@ export function ShellLayout(): React.JSX.Element {
       <Toolbar />
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
+        />
 
-        <main className="flex-1 overflow-auto bg-[var(--bg)] orbit-scrollbar relative">
-          {showBrowser ? (
-            <BrowserView />
+        <main className="flex-1 overflow-hidden bg-[var(--bg)] relative">
+          {isShellPage ? (
+            <div className="h-full overflow-auto orbit-scrollbar">
+              <Outlet />
+            </div>
           ) : (
-            // Home and Settings render via React Router
-            <div className="h-full" />
+            <BrowserView sidebarWidth={sidebarWidth} />
           )}
         </main>
       </div>
