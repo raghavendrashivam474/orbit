@@ -13,6 +13,8 @@
     "core:window:allow-is-maximized",
     "core:window:allow-set-decorations",
     "core:webview:allow-create-webview",
+    "core:menu:default",
+    "core:event:default",
     "log:default",
     "store:default"
   ]
