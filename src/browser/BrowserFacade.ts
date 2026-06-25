@@ -1,10 +1,7 @@
 /**
  * BrowserFacade.ts
  * Orbit Browser Layer - Public API
- *
- * Sprint 3 update: bounds-aware renderer management.
- * Each tab gets its own WebView2Renderer instance.
- * The facade manages show/hide on tab switch.
+ * Sprint 3: Debug logging added to trace navigation.
  */
 
 import type { RendererInterface } from "./RendererInterface";
@@ -28,26 +25,25 @@ class BrowserFacade {
   private readonly emitter  = new BrowserEventEmitter();
   private readonly tabs     = new Map<string, TabEntry>();
   private activeTabId: string | null = null;
-  private currentBounds: ContentBounds = { x: 0, y: 0, width: 0, height: 0 };
+  private currentBounds: ContentBounds = { x: 220, y: 128, width: 1060, height: 672 };
   private pollInterval: ReturnType<typeof setInterval> | null = null;
-
-  // â”€â”€ Session Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   registerTab(tabId: string, initialUrl = ""): void {
     if (this.tabs.has(tabId)) return;
-
+    console.warn("[BrowserFacade] registerTab:", tabId);
     const session  = createRendererSession(tabId, initialUrl);
     const renderer = new WebView2Renderer(`browser-${tabId}`);
-
     this.tabs.set(tabId, { session, renderer });
     useBrowserStore.getState().initTabState(tabId, initialUrl);
   }
 
   async activateTab(tabId: string): Promise<void> {
     const entry = this.tabs.get(tabId);
-    if (!entry) return;
+    if (!entry) {
+      console.warn("[BrowserFacade] activateTab: no entry for", tabId);
+      return;
+    }
 
-    // Hide the previously active tab renderer
     if (this.activeTabId && this.activeTabId !== tabId) {
       const prev = this.tabs.get(this.activeTabId);
       if (prev) {
@@ -58,14 +54,11 @@ class BrowserFacade {
 
     entry.session.isActive = true;
     this.activeTabId = tabId;
+    console.warn("[BrowserFacade] activateTab:", tabId, "bounds:", this.currentBounds);
 
-    // Show this tab renderer
     await entry.renderer.show().catch(console.warn);
-
-    // Apply current bounds
     await entry.renderer.updateBounds(this.currentBounds).catch(console.warn);
 
-    // If tab has a URL, navigate to it
     if (entry.session.state.url && !entry.session.state.error) {
       await entry.renderer.navigate(entry.session.state.url).catch(console.warn);
     }
@@ -76,23 +69,15 @@ class BrowserFacade {
   async destroyTab(tabId: string): Promise<void> {
     const entry = this.tabs.get(tabId);
     if (!entry) return;
-
     await entry.renderer.destroy().catch(console.warn);
     this.tabs.delete(tabId);
     useBrowserStore.getState().removeTabState(tabId);
   }
 
-  // â”€â”€ Bounds Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  /**
-   * Update the content area bounds.
-   * Called by the layout system whenever the content rectangle changes.
-   * The renderer is unaware of why bounds changed.
-   */
   async updateBounds(bounds: ContentBounds): Promise<void> {
     if (LayoutManager.boundsEqual(this.currentBounds, bounds)) return;
-
     this.currentBounds = bounds;
+    console.warn("[BrowserFacade] updateBounds:", bounds);
 
     if (this.activeTabId) {
       const entry = this.tabs.get(this.activeTabId);
@@ -102,45 +87,45 @@ class BrowserFacade {
     }
   }
 
-  // â”€â”€ Navigation Operations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   async navigate(input: string): Promise<void> {
-    if (!this.activeTabId) return;
+    console.warn("[BrowserFacade] navigate called:", input);
+    console.warn("[BrowserFacade] activeTabId:", this.activeTabId);
+    console.warn("[BrowserFacade] tabs count:", this.tabs.size);
+
+    if (!this.activeTabId) {
+      console.warn("[BrowserFacade] navigate: no active tab");
+      return;
+    }
     const entry = this.tabs.get(this.activeTabId);
-    if (!entry) return;
+    if (!entry) {
+      console.warn("[BrowserFacade] navigate: no entry for active tab");
+      return;
+    }
 
     const resolved = resolveUrl(input);
     const url = resolved.href;
+    console.warn("[BrowserFacade] resolved URL:", url);
 
-    this.emitter.emit({
-      type:  "navigation:start",
-      tabId: this.activeTabId,
-      url,
-    });
-
+    this.emitter.emit({ type: "navigation:start", tabId: this.activeTabId, url });
     this.updateTabState(this.activeTabId, {
-      url,
-      isLoading: true,
-      progress:  0,
-      error:     null,
+      url, isLoading: true, progress: 0, error: null,
     });
 
     try {
+      console.warn("[BrowserFacade] calling renderer.navigate...");
       await entry.renderer.navigate(url);
+      console.warn("[BrowserFacade] renderer.navigate succeeded");
       await entry.renderer.updateBounds(this.currentBounds);
       this.startPolling();
     } catch (err) {
+      console.warn("[BrowserFacade] renderer.navigate FAILED:", err);
       const error: BrowserError = {
         code:    "CONNECTION_FAILED",
-        message: err instanceof Error ? err.message : "Navigation failed",
+        message: err instanceof Error ? err.message : String(err),
         url,
       };
       this.updateTabState(this.activeTabId, { isLoading: false, error });
-      this.emitter.emit({
-        type:  "navigation:error",
-        tabId: this.activeTabId,
-        error,
-      });
+      this.emitter.emit({ type: "navigation:error", tabId: this.activeTabId, error });
     }
   }
 
@@ -172,16 +157,12 @@ class BrowserFacade {
     if (entry) await entry.renderer.forward().catch(console.warn);
   }
 
-  // â”€â”€ State Polling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
   private startPolling(): void {
     if (this.pollInterval) return;
-
     this.pollInterval = setInterval(async () => {
       if (!this.activeTabId) return;
       const entry = this.tabs.get(this.activeTabId);
       if (!entry) return;
-
       try {
         const [title, url, canGoBack, canGoForward] = await Promise.all([
           entry.renderer.getTitle(),
@@ -189,26 +170,12 @@ class BrowserFacade {
           entry.renderer.canGoBack(),
           entry.renderer.canGoForward(),
         ]);
-
         this.updateTabState(this.activeTabId, {
-          title,
-          url,
-          canGoBack,
-          canGoForward,
-          isLoading: false,
+          title, url, canGoBack, canGoForward, isLoading: false,
         });
-
+        this.emitter.emit({ type: "title:update", tabId: this.activeTabId, title });
         this.emitter.emit({
-          type:  "title:update",
-          tabId: this.activeTabId,
-          title,
-        });
-
-        this.emitter.emit({
-          type:         "history:update",
-          tabId:        this.activeTabId,
-          canGoBack,
-          canGoForward,
+          type: "history:update", tabId: this.activeTabId, canGoBack, canGoForward,
         });
       } catch {
         // Renderer not ready
@@ -223,21 +190,11 @@ class BrowserFacade {
     }
   }
 
-  // â”€â”€ Events â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  on(
-    type: BrowserEventType,
-    listener: (event: BrowserEvent) => void,
-  ): () => void {
+  on(type: BrowserEventType, listener: (event: BrowserEvent) => void): () => void {
     return this.emitter.on(type, listener);
   }
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-  private updateTabState(
-    tabId: string,
-    updates: Partial<TabBrowserState>,
-  ): void {
+  private updateTabState(tabId: string, updates: Partial<TabBrowserState>): void {
     const entry = this.tabs.get(tabId);
     if (entry) {
       entry.session.state = { ...entry.session.state, ...updates };

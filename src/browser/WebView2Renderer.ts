@@ -1,12 +1,6 @@
 /**
  * WebView2Renderer.ts
  * Orbit Browser Layer - Current Renderer Implementation
- *
- * Uses Tauri v2.11.x child webview API.
- * All implementation details are private to this file.
- * The rest of Orbit interacts only through RendererInterface.
- *
- * See ADR-0003 for architectural rationale.
  */
 
 import type { RendererInterface } from "./RendererInterface";
@@ -16,6 +10,7 @@ import { invoke } from "@/core/ipc/bridge";
 export class WebView2Renderer implements RendererInterface {
   private readonly id: string;
   private initialized = false;
+  private lastBounds: ContentBounds = { x: 220, y: 128, width: 800, height: 600 };
 
   constructor(id: string) {
     this.id = id;
@@ -23,32 +18,41 @@ export class WebView2Renderer implements RendererInterface {
 
   async navigate(url: string): Promise<void> {
     if (!this.initialized) {
-      // First navigation creates the child webview
-      await invoke("browser_create", { id: this.id, url });
+      await invoke<void>("browser_create", {
+        id:     this.id,
+        url:    url,
+        x:      Number(this.lastBounds.x),
+        y:      Number(this.lastBounds.y),
+        width:  Number(this.lastBounds.width),
+        height: Number(this.lastBounds.height),
+      });
       this.initialized = true;
     } else {
-      await invoke("browser_navigate", { id: this.id, url });
+      await invoke<void>("browser_navigate", {
+        id:  this.id,
+        url: url,
+      });
     }
   }
 
   async reload(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_reload", { id: this.id });
+    await invoke<void>("browser_reload", { id: this.id });
   }
 
   async stop(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_stop", { id: this.id });
+    await invoke<void>("browser_stop", { id: this.id });
   }
 
   async back(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_back", { id: this.id });
+    await invoke<void>("browser_back", { id: this.id });
   }
 
   async forward(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_forward", { id: this.id });
+    await invoke<void>("browser_forward", { id: this.id });
   }
 
   async getTitle(): Promise<string> {
@@ -72,29 +76,30 @@ export class WebView2Renderer implements RendererInterface {
   }
 
   async updateBounds(bounds: ContentBounds): Promise<void> {
+    this.lastBounds = bounds;
     if (!this.initialized) return;
-    await invoke("browser_update_bounds", {
-      id: this.id,
-      x:      bounds.x,
-      y:      bounds.y,
-      width:  bounds.width,
-      height: bounds.height,
+    await invoke<void>("browser_update_bounds", {
+      id:     this.id,
+      x:      Number(bounds.x),
+      y:      Number(bounds.y),
+      width:  Number(bounds.width),
+      height: Number(bounds.height),
     });
   }
 
   async show(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_show", { id: this.id });
+    await invoke<void>("browser_show", { id: this.id });
   }
 
   async hide(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_hide", { id: this.id });
+    await invoke<void>("browser_hide", { id: this.id });
   }
 
   async destroy(): Promise<void> {
     if (!this.initialized) return;
-    await invoke("browser_destroy", { id: this.id });
+    await invoke<void>("browser_destroy", { id: this.id });
     this.initialized = false;
   }
 }
