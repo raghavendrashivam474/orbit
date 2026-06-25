@@ -1,7 +1,10 @@
 /**
  * BrowserFacade.ts
  * Orbit Browser Layer - Public API
- * Sprint 3: Debug logging added to trace navigation.
+ *
+ * Single entry point for all browser operations.
+ * Shell and UI components use this exclusively.
+ * See ADR-0003 for architectural rationale.
  */
 
 import type { RendererInterface } from "./RendererInterface";
@@ -30,7 +33,6 @@ class BrowserFacade {
 
   registerTab(tabId: string, initialUrl = ""): void {
     if (this.tabs.has(tabId)) return;
-    console.warn("[BrowserFacade] registerTab:", tabId);
     const session  = createRendererSession(tabId, initialUrl);
     const renderer = new WebView2Renderer(`browser-${tabId}`);
     this.tabs.set(tabId, { session, renderer });
@@ -39,10 +41,7 @@ class BrowserFacade {
 
   async activateTab(tabId: string): Promise<void> {
     const entry = this.tabs.get(tabId);
-    if (!entry) {
-      console.warn("[BrowserFacade] activateTab: no entry for", tabId);
-      return;
-    }
+    if (!entry) return;
 
     if (this.activeTabId && this.activeTabId !== tabId) {
       const prev = this.tabs.get(this.activeTabId);
@@ -54,7 +53,6 @@ class BrowserFacade {
 
     entry.session.isActive = true;
     this.activeTabId = tabId;
-    console.warn("[BrowserFacade] activateTab:", tabId, "bounds:", this.currentBounds);
 
     await entry.renderer.show().catch(console.warn);
     await entry.renderer.updateBounds(this.currentBounds).catch(console.warn);
@@ -77,7 +75,6 @@ class BrowserFacade {
   async updateBounds(bounds: ContentBounds): Promise<void> {
     if (LayoutManager.boundsEqual(this.currentBounds, bounds)) return;
     this.currentBounds = bounds;
-    console.warn("[BrowserFacade] updateBounds:", bounds);
 
     if (this.activeTabId) {
       const entry = this.tabs.get(this.activeTabId);
@@ -88,23 +85,12 @@ class BrowserFacade {
   }
 
   async navigate(input: string): Promise<void> {
-    console.warn("[BrowserFacade] navigate called:", input);
-    console.warn("[BrowserFacade] activeTabId:", this.activeTabId);
-    console.warn("[BrowserFacade] tabs count:", this.tabs.size);
-
-    if (!this.activeTabId) {
-      console.warn("[BrowserFacade] navigate: no active tab");
-      return;
-    }
+    if (!this.activeTabId) return;
     const entry = this.tabs.get(this.activeTabId);
-    if (!entry) {
-      console.warn("[BrowserFacade] navigate: no entry for active tab");
-      return;
-    }
+    if (!entry) return;
 
     const resolved = resolveUrl(input);
     const url = resolved.href;
-    console.warn("[BrowserFacade] resolved URL:", url);
 
     this.emitter.emit({ type: "navigation:start", tabId: this.activeTabId, url });
     this.updateTabState(this.activeTabId, {
@@ -112,13 +98,10 @@ class BrowserFacade {
     });
 
     try {
-      console.warn("[BrowserFacade] calling renderer.navigate...");
       await entry.renderer.navigate(url);
-      console.warn("[BrowserFacade] renderer.navigate succeeded");
       await entry.renderer.updateBounds(this.currentBounds);
       this.startPolling();
     } catch (err) {
-      console.warn("[BrowserFacade] renderer.navigate FAILED:", err);
       const error: BrowserError = {
         code:    "CONNECTION_FAILED",
         message: err instanceof Error ? err.message : String(err),
