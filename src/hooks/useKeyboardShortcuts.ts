@@ -15,22 +15,23 @@ const SHORTCUTS = [
 ] as const;
 
 export function useKeyboardShortcuts(): void {
-  const { addTab, closeTab } = useTabStore();
-
   useEffect(() => {
     let mounted = true;
 
     const handleShortcut = (shortcut: string): void => {
       if (!mounted) return;
 
+      // Always read fresh state directly from the store
+      const store = useTabStore.getState();
+
       switch (shortcut) {
         case "CmdOrCtrl+T":
-          addTab();
+          store.addTab();
           logger.info("[Shortcut] Ctrl+T - New tab").catch(console.warn);
           break;
 
         case "CmdOrCtrl+W":
-          closeTab(useTabStore.getState().activeTabId);
+          store.closeTab(store.activeTabId);
           logger.info("[Shortcut] Ctrl+W - Close tab").catch(console.warn);
           break;
 
@@ -64,16 +65,15 @@ export function useKeyboardShortcuts(): void {
     const setup = async (): Promise<void> => {
       for (const shortcut of SHORTCUTS) {
         try {
-          const alreadyRegistered = await isRegistered(shortcut);
-          if (alreadyRegistered) continue;
-
+          const already = await isRegistered(shortcut);
+          if (already) continue;
           await register(shortcut, (event) => {
             if (event.state === "Pressed") {
               handleShortcut(shortcut);
             }
           });
         } catch {
-          // Already registered by previous mount — safe to ignore
+          // Already registered — safe to ignore
         }
       }
     };
@@ -84,7 +84,7 @@ export function useKeyboardShortcuts(): void {
       mounted = false;
       unregisterAll().catch(() => {});
     };
-  }, [addTab, closeTab]);
+  }, []); // Empty deps — reads fresh state via getState() every time
 
   // Escape — DOM only
   useEffect(() => {
