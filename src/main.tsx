@@ -1,9 +1,17 @@
-import React from "react";
+﻿import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { RouterProvider } from "react-router-dom";
+import { router } from "@/routes/router";
+import "@/index.css";
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  throw new Error("[Orbit] Root element not found.");
+}
+
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );
