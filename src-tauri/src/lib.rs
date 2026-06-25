@@ -14,6 +14,7 @@ use browser::{
 
 use tauri::{
     menu::{Menu, MenuItem},
+    Emitter,
     Manager,
 };
 
@@ -76,11 +77,6 @@ pub fn run() {
             let version = app.package_info().version.to_string();
             println!("[Orbit] Starting version {version}");
 
-            // Register native menu with keyboard accelerators.
-            // The menu is hidden but accelerators remain active.
-            // This ensures shortcuts work even when focus is
-            // inside a child webview.
-
             let new_tab = MenuItem::with_id(
                 app, "new_tab", "New Tab", true, Some("CmdOrCtrl+T"),
             ).map_err(|e| e.to_string())?;
@@ -124,16 +120,16 @@ pub fn run() {
 
             app.set_menu(menu).map_err(|e| e.to_string())?;
 
-            // Hide the menu bar so it does not show visually
+            // Hide menu bar visually
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.set_menu_visible(false);
+                // set_menu(None) hides the menu bar on Windows
+                let _ = window.set_menu(None);
             }
 
-            // Listen for menu events and emit them as app events
-            // so the React frontend can handle them.
+            // Forward menu events to the React shell as Tauri events
             let handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
-                let id = event.id().0.as_str();
+                let id = event.id().0.as_str().to_string();
                 if let Some(window) = handle.get_webview_window("main") {
                     let _ = window.emit("orbit-shortcut", id);
                 }
