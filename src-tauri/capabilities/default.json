@@ -14,7 +14,10 @@
     "core:window:allow-set-decorations",
     "core:webview:allow-create-webview",
     "core:event:default",
-    "global-shortcut:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-unregister-all",
+    "global-shortcut:allow-is-registered",
     "log:default",
     "store:default"
   ]

@@ -1,93 +1,80 @@
-/**
- * useKeyboardShortcuts.ts
- * Orbit Keyboard Shortcuts
- *
- * Sprint 3: Uses Tauri global shortcut plugin.
- * Global shortcuts work regardless of which webview has focus.
- */
-
 import { useEffect } from "react";
-import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
+import { register, isRegistered, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useTabStore } from "@/store/tabStore";
 import { browserFacade } from "@/browser/BrowserFacade";
 import { logger } from "@/services/logger/logger";
 
+const SHORTCUTS = [
+  "CmdOrCtrl+T",
+  "CmdOrCtrl+W",
+  "CmdOrCtrl+L",
+  "CmdOrCtrl+R",
+  "F5",
+  "Alt+Left",
+  "Alt+Right",
+] as const;
+
 export function useKeyboardShortcuts(): void {
-  const { addTab, closeTab, activeTabId } = useTabStore();
+  const { addTab, closeTab } = useTabStore();
 
   useEffect(() => {
     let mounted = true;
 
+    const handleShortcut = (shortcut: string): void => {
+      if (!mounted) return;
+
+      switch (shortcut) {
+        case "CmdOrCtrl+T":
+          addTab();
+          logger.info("[Shortcut] Ctrl+T - New tab").catch(console.warn);
+          break;
+
+        case "CmdOrCtrl+W":
+          closeTab(useTabStore.getState().activeTabId);
+          logger.info("[Shortcut] Ctrl+W - Close tab").catch(console.warn);
+          break;
+
+        case "CmdOrCtrl+L": {
+          const bar = document.querySelector<HTMLInputElement>(
+            "input[aria-label='Address bar']"
+          );
+          if (bar) { bar.focus(); bar.select(); }
+          logger.info("[Shortcut] Ctrl+L - Address bar").catch(console.warn);
+          break;
+        }
+
+        case "CmdOrCtrl+R":
+        case "F5":
+          browserFacade.reload().catch(console.warn);
+          logger.info("[Shortcut] Reload").catch(console.warn);
+          break;
+
+        case "Alt+Left":
+          browserFacade.back().catch(console.warn);
+          logger.info("[Shortcut] Back").catch(console.warn);
+          break;
+
+        case "Alt+Right":
+          browserFacade.forward().catch(console.warn);
+          logger.info("[Shortcut] Forward").catch(console.warn);
+          break;
+      }
+    };
+
     const setup = async (): Promise<void> => {
-      try {
-        // Unregister any previous shortcuts first
-        await unregisterAll();
+      for (const shortcut of SHORTCUTS) {
+        try {
+          const alreadyRegistered = await isRegistered(shortcut);
+          if (alreadyRegistered) continue;
 
-        // Ctrl+T — New tab
-        await register("CmdOrCtrl+T", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            addTab();
-            logger.info("[Shortcut] Ctrl+T - New tab").catch(console.warn);
-          }
-        });
-
-        // Ctrl+W — Close tab
-        await register("CmdOrCtrl+W", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            closeTab(useTabStore.getState().activeTabId);
-            logger.info("[Shortcut] Ctrl+W - Close tab").catch(console.warn);
-          }
-        });
-
-        // Ctrl+L — Focus address bar
-        await register("CmdOrCtrl+L", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            const bar = document.querySelector<HTMLInputElement>(
-              "input[aria-label='Address bar']"
-            );
-            if (bar) {
-              bar.focus();
-              bar.select();
+          await register(shortcut, (event) => {
+            if (event.state === "Pressed") {
+              handleShortcut(shortcut);
             }
-            logger.info("[Shortcut] Ctrl+L - Address bar").catch(console.warn);
-          }
-        });
-
-        // Ctrl+R — Reload
-        await register("CmdOrCtrl+R", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            browserFacade.reload().catch(console.warn);
-            logger.info("[Shortcut] Ctrl+R - Reload").catch(console.warn);
-          }
-        });
-
-        // F5 — Reload
-        await register("F5", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            browserFacade.reload().catch(console.warn);
-            logger.info("[Shortcut] F5 - Reload").catch(console.warn);
-          }
-        });
-
-        // Alt+Left — Back
-        await register("Alt+Left", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            browserFacade.back().catch(console.warn);
-            logger.info("[Shortcut] Alt+Left - Back").catch(console.warn);
-          }
-        });
-
-        // Alt+Right — Forward
-        await register("Alt+Right", (event) => {
-          if (event.state === "Pressed" && mounted) {
-            browserFacade.forward().catch(console.warn);
-            logger.info("[Shortcut] Alt+Right - Forward").catch(console.warn);
-          }
-        });
-
-        console.warn("[Shortcuts] All global shortcuts registered.");
-      } catch (err) {
-        console.warn("[Shortcuts] Registration failed:", err);
+          });
+        } catch {
+          // Already registered by previous mount — safe to ignore
+        }
       }
     };
 
@@ -95,11 +82,11 @@ export function useKeyboardShortcuts(): void {
 
     return () => {
       mounted = false;
-      unregisterAll().catch(console.warn);
+      unregisterAll().catch(() => {});
     };
-  }, [addTab, closeTab, activeTabId]);
+  }, [addTab, closeTab]);
 
-  // Escape — DOM only (not a global shortcut)
+  // Escape — DOM only
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
