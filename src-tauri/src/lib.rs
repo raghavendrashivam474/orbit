@@ -77,6 +77,11 @@ pub fn run() {
             let version = app.package_info().version.to_string();
             println!("[Orbit] Starting version {version}");
 
+            // Register menu items with keyboard accelerators.
+            // The menu is registered at app level — not shown as a
+            // visible menu bar — but accelerators remain active.
+            // This makes shortcuts work even inside child webviews.
+
             let new_tab = MenuItem::with_id(
                 app, "new_tab", "New Tab", true, Some("CmdOrCtrl+T"),
             ).map_err(|e| e.to_string())?;
@@ -118,15 +123,11 @@ pub fn run() {
                 ],
             ).map_err(|e| e.to_string())?;
 
+            // Set at app level — accelerators active, menu bar not visible
+            // because our window has custom decorations disabled
             app.set_menu(menu).map_err(|e| e.to_string())?;
 
-            // Hide menu bar visually
-            if let Some(window) = app.get_webview_window("main") {
-                // set_menu(None) hides the menu bar on Windows
-                let _ = window.set_menu(None);
-            }
-
-            // Forward menu events to the React shell as Tauri events
+            // Forward menu events to React shell as Tauri events
             let handle = app.handle().clone();
             app.on_menu_event(move |_app, event| {
                 let id = event.id().0.as_str().to_string();
