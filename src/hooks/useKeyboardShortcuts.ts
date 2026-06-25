@@ -14,14 +14,13 @@ const SHORTCUTS = [
   "Alt+Right",
 ] as const;
 
+const ORBIT_SHORTCUT_EVENT = "orbit:shortcut";
+
 export function useKeyboardShortcuts(): void {
+  // Handle shortcut actions inside React event loop
   useEffect(() => {
-    let mounted = true;
-
-    const handleShortcut = (shortcut: string): void => {
-      if (!mounted) return;
-
-      // Always read fresh state directly from the store
+    const handler = (e: Event): void => {
+      const shortcut = (e as CustomEvent<string>).detail;
       const store = useTabStore.getState();
 
       switch (shortcut) {
@@ -62,14 +61,24 @@ export function useKeyboardShortcuts(): void {
       }
     };
 
+    window.addEventListener(ORBIT_SHORTCUT_EVENT, handler);
+    return () => window.removeEventListener(ORBIT_SHORTCUT_EVENT, handler);
+  }, []);
+
+  // Register global shortcuts — dispatch into browser event loop
+  useEffect(() => {
     const setup = async (): Promise<void> => {
       for (const shortcut of SHORTCUTS) {
         try {
           const already = await isRegistered(shortcut);
           if (already) continue;
+
           await register(shortcut, (event) => {
             if (event.state === "Pressed") {
-              handleShortcut(shortcut);
+              // Push back into browser event loop via CustomEvent
+              window.dispatchEvent(
+                new CustomEvent(ORBIT_SHORTCUT_EVENT, { detail: shortcut })
+              );
             }
           });
         } catch {
@@ -81,12 +90,11 @@ export function useKeyboardShortcuts(): void {
     setup();
 
     return () => {
-      mounted = false;
       unregisterAll().catch(() => {});
     };
-  }, []); // Empty deps — reads fresh state via getState() every time
+  }, []);
 
-  // Escape — DOM only
+  // Escape via DOM
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {
