@@ -2,10 +2,8 @@
  * BrowserView.tsx
  * Orbit Browser Component - WebView Host
  *
- * Sprint 3: Reports content bounds to BrowserFacade.
- * BrowserView knows the bounds changed.
- * It does not know why they changed.
- * It simply passes the new rectangle to the facade.
+ * Renders the browser content area for the active tab.
+ * Blank tabs now render NewTabPage instead of a plain placeholder.
  */
 
 import { useEffect, useRef } from "react";
@@ -16,6 +14,7 @@ import { useContentBounds } from "@/hooks/useContentBounds";
 import { LayoutManager } from "@/layout/LayoutManager";
 import { BrowserLoading } from "./BrowserLoading";
 import { BrowserError } from "./BrowserError";
+import { NewTabPage } from "./NewTabPage";
 
 interface BrowserViewProps {
   sidebarWidth: number;
@@ -23,29 +22,30 @@ interface BrowserViewProps {
 
 export function BrowserView({ sidebarWidth }: BrowserViewProps): React.JSX.Element {
   const { activeTabId } = useTabStore();
-  const { tabStates }   = useBrowserStore();
-  const prevBoundsRef   = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  const { tabStates } = useBrowserStore();
+  const prevBoundsRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   const bounds = useContentBounds({ sidebarWidth });
   const tabState = activeTabId ? tabStates[activeTabId] : null;
 
-  // Report bounds changes to the facade
   useEffect(() => {
     if (LayoutManager.boundsEqual(prevBoundsRef.current, bounds)) return;
     prevBoundsRef.current = bounds;
     browserFacade.updateBounds(bounds).catch(console.warn);
   }, [bounds]);
 
-  // Activate tab when active tab changes
   useEffect(() => {
     if (!activeTabId) return;
     browserFacade.activateTab(activeTabId).catch(console.warn);
   }, [activeTabId]);
 
-  // Stop polling on unmount
   useEffect(() => {
-    return () => { browserFacade.stopPolling(); };
+    return () => {
+      browserFacade.stopPolling();
+    };
   }, []);
+
+  const showNewTabPage = !tabState?.url && !tabState?.isLoading && !tabState?.error;
 
   return (
     <div
@@ -60,18 +60,12 @@ export function BrowserView({ sidebarWidth }: BrowserViewProps): React.JSX.Eleme
         <BrowserError error={tabState.error} />
       )}
 
-      {!tabState?.url && !tabState?.isLoading && !tabState?.error && (
-        <div className="flex flex-col items-center justify-center h-full gap-3 animate-fade-in">
-          <p className="text-[var(--text-sm)] text-[var(--text-muted)]">
-            Enter a URL or search above to browse.
-          </p>
-        </div>
-      )}
+      {showNewTabPage && <NewTabPage />}
 
-      {/* Layout anchor for the child webview */}
+      {/* WebView anchor */}
       <div
         id="orbit-webview-host"
-        className="flex-1 w-full"
+        className={showNewTabPage ? "hidden" : "flex-1 w-full"}
         aria-hidden="true"
       />
     </div>

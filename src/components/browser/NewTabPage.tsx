@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Search, Clock, Star, Zap } from "lucide-react";
 import { browserFacade } from "@/browser/BrowserFacade";
 
@@ -10,29 +9,18 @@ const QUICK_SHORTCUTS = [
   { label: "Figma", url: "figma.com", color: "var(--color-purple)" },
 ] as const;
 
-export function HomePage(): React.JSX.Element {
+export function NewTabPage(): React.JSX.Element {
   const [query, setQuery] = useState("");
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     const value = query.trim();
     if (!value) return;
-
-    // Switch away from shell home page so BrowserView is visible
-    navigate("/browse");
-
-    // Allow route transition, then navigate browser
-    setTimeout(() => {
-      browserFacade.navigate(value).catch(console.warn);
-    }, 0);
+    await browserFacade.navigate(value).catch(console.warn);
   };
 
   const handleQuickOpen = async (url: string): Promise<void> => {
-    navigate("/browse");
-    setTimeout(() => {
-      browserFacade.navigate(url).catch(console.warn);
-    }, 0);
+    await browserFacade.navigate(url).catch(console.warn);
   };
 
   return (
@@ -88,7 +76,7 @@ export function HomePage(): React.JSX.Element {
               "placeholder:text-[var(--text-muted)]",
               "caret-[var(--accent)]",
             ].join(" ")}
-            aria-label="Home search"
+            aria-label="New tab search"
           />
         </div>
       </form>
