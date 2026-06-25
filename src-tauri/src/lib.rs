@@ -1,3 +1,22 @@
+//! lib.rs
+//! Orbit Tauri Application Library
+//! Sprint 3: Browser commands registered.
+
+mod browser;
+
+use browser::{
+    browser_back,
+    browser_can_go_back,
+    browser_can_go_forward,
+    browser_destroy,
+    browser_forward,
+    browser_get_title,
+    browser_get_url,
+    browser_navigate,
+    browser_reload,
+    browser_stop,
+};
+
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String {
     app.package_info().version.to_string()
@@ -38,6 +57,16 @@ pub fn run() {
             maximize_window,
             close_window,
             is_window_maximized,
+            browser_navigate,
+            browser_reload,
+            browser_stop,
+            browser_back,
+            browser_forward,
+            browser_get_title,
+            browser_get_url,
+            browser_can_go_back,
+            browser_can_go_forward,
+            browser_destroy,
         ])
         .setup(|app| {
             let version = app.package_info().version.to_string();
