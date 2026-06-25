@@ -1,6 +1,6 @@
 //! lib.rs
 //! Orbit Tauri Application Library
-//! Sprint 3: Native keyboard shortcuts via menu accelerators.
+//! Sprint 3: Global shortcuts via tauri-plugin-global-shortcut.
 
 mod browser;
 
@@ -12,11 +12,7 @@ use browser::{
     browser_stop, browser_update_bounds,
 };
 
-use tauri::{
-    menu::{Menu, MenuItem},
-    Emitter,
-    Manager,
-};
+use tauri::Emitter;
 
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String {
@@ -52,6 +48,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_app_version,
             minimize_window,
@@ -76,66 +73,6 @@ pub fn run() {
         .setup(|app| {
             let version = app.package_info().version.to_string();
             println!("[Orbit] Starting version {version}");
-
-            // Register menu items with keyboard accelerators.
-            // The menu is registered at app level — not shown as a
-            // visible menu bar — but accelerators remain active.
-            // This makes shortcuts work even inside child webviews.
-
-            let new_tab = MenuItem::with_id(
-                app, "new_tab", "New Tab", true, Some("CmdOrCtrl+T"),
-            ).map_err(|e| e.to_string())?;
-
-            let close_tab = MenuItem::with_id(
-                app, "close_tab", "Close Tab", true, Some("CmdOrCtrl+W"),
-            ).map_err(|e| e.to_string())?;
-
-            let focus_address = MenuItem::with_id(
-                app, "focus_address", "Focus Address Bar", true, Some("CmdOrCtrl+L"),
-            ).map_err(|e| e.to_string())?;
-
-            let reload_page = MenuItem::with_id(
-                app, "reload_page", "Reload", true, Some("CmdOrCtrl+R"),
-            ).map_err(|e| e.to_string())?;
-
-            let reload_f5 = MenuItem::with_id(
-                app, "reload_f5", "Reload F5", true, Some("F5"),
-            ).map_err(|e| e.to_string())?;
-
-            let nav_back = MenuItem::with_id(
-                app, "nav_back", "Back", true, Some("Alt+Left"),
-            ).map_err(|e| e.to_string())?;
-
-            let nav_forward = MenuItem::with_id(
-                app, "nav_forward", "Forward", true, Some("Alt+Right"),
-            ).map_err(|e| e.to_string())?;
-
-            let menu = Menu::with_items(
-                app,
-                &[
-                    &new_tab,
-                    &close_tab,
-                    &focus_address,
-                    &reload_page,
-                    &reload_f5,
-                    &nav_back,
-                    &nav_forward,
-                ],
-            ).map_err(|e| e.to_string())?;
-
-            // Set at app level — accelerators active, menu bar not visible
-            // because our window has custom decorations disabled
-            app.set_menu(menu).map_err(|e| e.to_string())?;
-
-            // Forward menu events to React shell as Tauri events
-            let handle = app.handle().clone();
-            app.on_menu_event(move |_app, event| {
-                let id = event.id().0.as_str().to_string();
-                if let Some(window) = handle.get_webview_window("main") {
-                    let _ = window.emit("orbit-shortcut", id);
-                }
-            });
-
             Ok(())
         })
         .run(tauri::generate_context!())

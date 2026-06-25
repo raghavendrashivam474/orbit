@@ -2,17 +2,12 @@
  * useKeyboardShortcuts.ts
  * Orbit Keyboard Shortcuts
  *
- * Sprint 3: Uses BOTH native Tauri menu accelerators AND DOM listeners.
- *
- * Native accelerators handle shortcuts even when focus is inside
- * a child webview (where DOM events do not bubble to the shell).
- *
- * DOM listeners provide a fallback and handle shortcuts that
- * are not registered as menu accelerators (e.g., Escape).
+ * Sprint 3: Uses Tauri global shortcut plugin.
+ * Global shortcuts work regardless of which webview has focus.
  */
 
 import { useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useTabStore } from "@/store/tabStore";
 import { browserFacade } from "@/browser/BrowserFacade";
 import { logger } from "@/services/logger/logger";
@@ -20,66 +15,97 @@ import { logger } from "@/services/logger/logger";
 export function useKeyboardShortcuts(): void {
   const { addTab, closeTab, activeTabId } = useTabStore();
 
-  // ── Native shortcut listener (works inside child webviews) ──
   useEffect(() => {
-    const unlisten = listen<string>("orbit-shortcut", (event) => {
-      const id = event.payload;
+    let mounted = true;
 
-      switch (id) {
-        case "new_tab":
-          addTab();
-          logger.info("[Native] Ctrl+T - New tab").catch(console.warn);
-          break;
+    const setup = async (): Promise<void> => {
+      try {
+        // Unregister any previous shortcuts first
+        await unregisterAll();
 
-        case "close_tab":
-          closeTab(activeTabId);
-          logger.info("[Native] Ctrl+W - Close tab").catch(console.warn);
-          break;
-
-        case "focus_address": {
-          const bar = document.querySelector<HTMLInputElement>(
-            "input[aria-label='Address bar']"
-          );
-          if (bar) {
-            bar.focus();
-            bar.select();
+        // Ctrl+T — New tab
+        await register("CmdOrCtrl+T", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            addTab();
+            logger.info("[Shortcut] Ctrl+T - New tab").catch(console.warn);
           }
-          logger.info("[Native] Ctrl+L - Address bar").catch(console.warn);
-          break;
-        }
+        });
 
-        case "reload_page":
-        case "reload_f5":
-          browserFacade.reload().catch(console.warn);
-          logger.info("[Native] Reload").catch(console.warn);
-          break;
+        // Ctrl+W — Close tab
+        await register("CmdOrCtrl+W", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            closeTab(useTabStore.getState().activeTabId);
+            logger.info("[Shortcut] Ctrl+W - Close tab").catch(console.warn);
+          }
+        });
 
-        case "nav_back":
-          browserFacade.back().catch(console.warn);
-          logger.info("[Native] Alt+Left - Back").catch(console.warn);
-          break;
+        // Ctrl+L — Focus address bar
+        await register("CmdOrCtrl+L", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            const bar = document.querySelector<HTMLInputElement>(
+              "input[aria-label='Address bar']"
+            );
+            if (bar) {
+              bar.focus();
+              bar.select();
+            }
+            logger.info("[Shortcut] Ctrl+L - Address bar").catch(console.warn);
+          }
+        });
 
-        case "nav_forward":
-          browserFacade.forward().catch(console.warn);
-          logger.info("[Native] Alt+Right - Forward").catch(console.warn);
-          break;
+        // Ctrl+R — Reload
+        await register("CmdOrCtrl+R", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            browserFacade.reload().catch(console.warn);
+            logger.info("[Shortcut] Ctrl+R - Reload").catch(console.warn);
+          }
+        });
+
+        // F5 — Reload
+        await register("F5", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            browserFacade.reload().catch(console.warn);
+            logger.info("[Shortcut] F5 - Reload").catch(console.warn);
+          }
+        });
+
+        // Alt+Left — Back
+        await register("Alt+Left", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            browserFacade.back().catch(console.warn);
+            logger.info("[Shortcut] Alt+Left - Back").catch(console.warn);
+          }
+        });
+
+        // Alt+Right — Forward
+        await register("Alt+Right", (event) => {
+          if (event.state === "Pressed" && mounted) {
+            browserFacade.forward().catch(console.warn);
+            logger.info("[Shortcut] Alt+Right - Forward").catch(console.warn);
+          }
+        });
+
+        console.warn("[Shortcuts] All global shortcuts registered.");
+      } catch (err) {
+        console.warn("[Shortcuts] Registration failed:", err);
       }
-    });
+    };
+
+    setup();
 
     return () => {
-      unlisten.then((fn) => fn());
+      mounted = false;
+      unregisterAll().catch(console.warn);
     };
   }, [addTab, closeTab, activeTabId]);
 
-  // ── DOM listener (fallback for non-accelerator keys) ────────
+  // Escape — DOM only (not a global shortcut)
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      // Escape — stop loading
       if (e.key === "Escape") {
         browserFacade.stop().catch(console.warn);
       }
     };
-
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
   }, []);
