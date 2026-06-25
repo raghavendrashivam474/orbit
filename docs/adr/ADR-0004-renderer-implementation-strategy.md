@@ -9,50 +9,60 @@ Sprint: 3 - Browser Core
 Tauri 2.11.3 provides two paths for embedding web content:
 
 1. WebviewWindow (stable) - a separate OS-level window
-2. Child webview via add_child (unstable feature flag required)
+2. Child webview via Window::add_child (requires unstable feature)
 
-Orbit's engineering principle is to build on stable APIs only.
-Enabling the unstable feature flag would allow embedded child
-webviews today but introduces maintenance risk on every Tauri
-version update.
+Orbit's initial preference was stable APIs only.
+However, embedded rendering is a core product capability.
+A browser that opens separate OS windows for each tab
+does not match Orbit's product vision.
 
 ## Decision
 
-Sprint 3 uses WebviewWindow (stable API).
-The unstable child webview API is deferred.
+Enable the Tauri unstable feature flag.
+Use Window::add_child to create child webviews inside the main window.
 
-## Rationale
+## Strict Scope
 
-Orbit can already state: built entirely on stable technologies.
-This is a valuable engineering position to maintain.
+The unstable dependency is contained to exactly one file:
 
-The renderer abstraction (ADR-0003) means this decision
-affects only one file: WebView2Renderer / browser/mod.rs.
+    src-tauri/src/browser/mod.rs
 
-The rest of Orbit - shell, tabs, workspace, AI layer -
-is completely unaffected by this implementation choice.
+No other file in Orbit depends on unstable Tauri APIs.
+The TypeScript layer sees only BrowserFacade and RendererInterface.
+No unstable types cross the Rust/TypeScript boundary.
 
-## Current Implementation
+## Why This Is Acceptable
 
-WebviewWindow per tab.
-Positioned to cover the content area.
-Hidden when tab is inactive.
-Shown when tab is active.
+1. Embedded rendering is fundamental to Orbit's UX.
+   Separate OS windows are a framework workaround, not the product.
 
-## Upgrade Path
+2. The RendererInterface abstraction contains the risk.
+   If Tauri changes the unstable API signature, only mod.rs changes.
+   BrowserFacade, shell, tabs, stores, workspace - none change.
 
-When Tauri stabilizes the child webview API:
-  1. Remove the WebviewWindow implementation from browser/mod.rs
-  2. Add the child webview implementation
-  3. No other files change
+3. ADR-0003 was designed for exactly this situation.
+   The abstraction exists to isolate renderer implementation details.
+
+## Risk
+
+Future Tauri updates may change the unstable API signature.
+This would require updating browser/mod.rs only.
+No other file would be affected.
+
+## Exit Strategy
+
+When Tauri promotes child webview APIs to stable:
+  Remove the unstable feature flag from Cargo.toml.
+  Update browser/mod.rs to use the stable API.
+  No other files change.
 
 When Orbit moves to Chromium (Phase 5):
-  1. Implement ChromiumRenderer satisfying RendererInterface
-  2. No other files change
+  Implement ChromiumRenderer satisfying RendererInterface.
+  browser/mod.rs is replaced entirely.
+  No other files change.
 
-## Review Conditions
+## Engineering Principle Preserved
 
-Revisit when:
-- Tauri promotes child webview API to stable
-- Phase 5 Chromium integration begins
-- A strong product reason requires embedded webviews before stabilization
+Orbit's architecture depends on stable abstractions.
+Only one renderer implementation depends on an unstable API.
+That is a contained, documented, intentional tradeoff.
