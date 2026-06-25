@@ -1,15 +1,5 @@
-/**
- * ShellLayout.tsx
- * Orbit Application Shell
- *
- * Sprint 3: Sidebar width is tracked here and passed
- * down to BrowserView so it can compute content bounds.
- * The sidebar width is the only layout input the shell provides.
- */
-
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { TitleBar } from "./TitleBar";
 import { TabBar } from "@/components/tabs/TabBar";
 import { Toolbar } from "@/components/toolbar/Toolbar";
@@ -22,22 +12,30 @@ import { useBrowserStore } from "@/store/browserStore";
 import { browserFacade } from "@/browser/BrowserFacade";
 import { LAYOUT } from "@/layout/LayoutConstants";
 
+const SHELL_ROUTES = [
+  "/",
+  "/settings",
+  "/workspaces",
+  "/history",
+  "/bookmarks",
+  "/downloads",
+];
+
 export function ShellLayout(): React.JSX.Element {
   useTheme();
   useKeyboardShortcuts();
 
   const location = useLocation();
   const { tabs, activeTabId } = useTabStore();
-  const { initTabState }      = useBrowserStore();
+  const { initTabState } = useBrowserStore();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const sidebarWidth = sidebarCollapsed
     ? LAYOUT.SIDEBAR_COLLAPSED
     : LAYOUT.SIDEBAR_EXPANDED;
 
-  const isShellPage = location.pathname === "/" || location.pathname === "/settings";
+  const isShellPage = SHELL_ROUTES.includes(location.pathname);
 
-  // Register new tabs with facade
   useEffect(() => {
     tabs.forEach((tab) => {
       const state = browserFacade.getSessionState(tab.id);
@@ -48,7 +46,6 @@ export function ShellLayout(): React.JSX.Element {
     });
   }, [tabs, initTabState]);
 
-  // Activate tab on switch
   useEffect(() => {
     if (activeTabId) {
       browserFacade.activateTab(activeTabId).catch(console.warn);
@@ -68,13 +65,13 @@ export function ShellLayout(): React.JSX.Element {
         />
 
         <main className="flex-1 overflow-hidden bg-[var(--bg)] relative">
-          {isShellPage ? (
-            <div className="h-full overflow-auto orbit-scrollbar">
+          {isShellPage && (
+            <div className="absolute inset-0 overflow-auto orbit-scrollbar z-10">
               <Outlet />
             </div>
-          ) : (
-            <BrowserView sidebarWidth={sidebarWidth} />
           )}
+
+          <BrowserView sidebarWidth={sidebarWidth} />
         </main>
       </div>
     </div>
