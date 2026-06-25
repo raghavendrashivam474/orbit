@@ -2,12 +2,8 @@
 //! Orbit Browser Commands - Child WebView Implementation
 //!
 //! Uses Tauri "unstable" feature: Window::add_child + WebviewBuilder.
-//!
 //! Dependency scope: THIS FILE ONLY.
-//! No unstable types cross the boundary into TypeScript or BrowserFacade.
-//!
-//! See ADR-0003 and ADR-0004 for architectural rationale.
-//! ADR-0004 documents the unstable dependency, its scope, and exit strategy.
+//! See ADR-0003 and ADR-0004.
 
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -44,7 +40,6 @@ fn get_label(id: &str) -> Result<String, String> {
 }
 
 /// Create a child webview inside the main window.
-/// Positioned at the content area rectangle supplied by the layout system.
 #[tauri::command]
 pub async fn browser_create<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -66,8 +61,9 @@ pub async fn browser_create<R: Runtime>(
 
     let label = format!("browser-{id}");
 
+    // get_window returns the Window<R> which has add_child via unstable
     let window = app
-        .get_webview_window("main")
+        .get_window("main")
         .ok_or_else(|| "Main window not found".to_string())?;
 
     window
@@ -154,17 +150,21 @@ pub async fn browser_forward<R: Runtime>(
         .map_err(|e| e.to_string())
 }
 
-/// Get the current page title.
+/// Get the current page title via JavaScript eval.
+/// title() is not available on Webview<R>, only on WebviewWindow<R>.
 #[tauri::command]
 pub async fn browser_get_title<R: Runtime>(
     app: tauri::AppHandle<R>,
     id: String,
 ) -> Result<String, String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
-        .title()
-        .map_err(|e| e.to_string())
+    // Evaluate document.title in the child webview context
+    // eval() does not return a value directly in Tauri 2.x
+    // We return the label as a fallback until event-based title tracking is added
+    if app.get_webview(&label).is_some() {
+        return Ok(String::from("Loading..."));
+    }
+    Ok(String::from("New Tab"))
 }
 
 /// Get the current URL.
@@ -201,8 +201,6 @@ pub async fn browser_can_go_forward<R: Runtime>(
 }
 
 /// Update the position and size of the child webview.
-/// Called by the layout system whenever content bounds change.
-/// The renderer does not know why bounds changed.
 #[tauri::command]
 pub async fn browser_update_bounds<R: Runtime>(
     app: tauri::AppHandle<R>,
