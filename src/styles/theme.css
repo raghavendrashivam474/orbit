@@ -1,0 +1,40 @@
+/*
+ * theme.css
+ * Orbit Theme System
+ * Maps design tokens to semantic theme variables.
+ */
+
+[data-theme="dark"],
+:root {
+  --bg:              var(--color-bg);
+  --surface:         var(--color-surface);
+  --elevated:        var(--color-elevated);
+  --border:          var(--color-border);
+  --border-subtle:   var(--color-border-subtle);
+
+  --text:            var(--color-text-primary);
+  --text-secondary:  var(--color-text-secondary);
+  --text-muted:      var(--color-text-muted);
+  --text-disabled:   var(--color-text-disabled);
+
+  --accent:          var(--color-primary);
+  --accent-hover:    var(--color-primary-hover);
+  --accent-muted:    var(--color-primary-muted);
+}
+
+[data-theme="light"] {
+  --bg:              #F8FAFC;
+  --surface:         #FFFFFF;
+  --elevated:        #F1F5F9;
+  --border:          #E2E8F0;
+  --border-subtle:   #EEF2F7;
+
+  --text:            #0F172A;
+  --text-secondary:  #475569;
+  --text-muted:      #94A3B8;
+  --text-disabled:   #CBD5E1;
+
+  --accent:          var(--color-primary);
+  --accent-hover:    var(--color-primary-hover);
+  --accent-muted:    var(--color-primary-muted);
+}

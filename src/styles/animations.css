@@ -1,0 +1,60 @@
+/*
+ * animations.css
+ * Orbit Animation Library
+ */
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes slide-in-left {
+  from { transform: translateX(-8px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(8px); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
+@keyframes slide-in-up {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { transform: scale(0.95); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes tab-open {
+  from { transform: scaleX(0.8); opacity: 0; }
+  to   { transform: scaleX(1);   opacity: 1; }
+}
+
+@keyframes sidebar-expand {
+  from { width: var(--sidebar-collapsed); }
+  to   { width: var(--sidebar-width);     }
+}
+
+@keyframes sidebar-collapse {
+  from { width: var(--sidebar-width);     }
+  to   { width: var(--sidebar-collapsed); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.animate-fade-in      { animation: fade-in      var(--duration-normal) var(--ease-out) forwards; }
+.animate-slide-in-left{ animation: slide-in-left var(--duration-normal) var(--ease-out) forwards; }
+.animate-slide-in-up  { animation: slide-in-up   var(--duration-normal) var(--ease-out) forwards; }
+.animate-scale-in     { animation: scale-in      var(--duration-normal) var(--ease-out) forwards; }
+.animate-tab-open     { animation: tab-open      var(--duration-fast)   var(--ease-out) forwards; }
