@@ -61,7 +61,7 @@ export function SettingsPage(): React.JSX.Element {
         <div className="orbit-panel p-4 space-y-2">
           {[
             ["Version",  "0.2.0"],
-            ["Sprint",   "2 — Shell"],
+            ["Sprint",   "2 â€” Shell"],
             ["Platform", "Windows"],
             ["Engine",   "Tauri v2 + Rust"],
           ].map(([label, value]) => (

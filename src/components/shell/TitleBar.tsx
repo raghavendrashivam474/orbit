@@ -11,7 +11,7 @@ export function TitleBar(): React.JSX.Element {
         "select-none",
       ].join(" ")}
     >
-      {/* Left — Orbit branding */}
+      {/* Left â€” Orbit branding */}
       <div className="flex items-center gap-2 px-4 orbit-no-drag">
         <div className="flex items-center justify-center w-5 h-5">
           <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-5 h-5">
@@ -31,10 +31,10 @@ export function TitleBar(): React.JSX.Element {
         </span>
       </div>
 
-      {/* Center — drag region */}
+      {/* Center â€” drag region */}
       <div className="flex-1 h-full orbit-drag" />
 
-      {/* Right — window controls */}
+      {/* Right â€” window controls */}
       <WindowControls />
     </div>
   );

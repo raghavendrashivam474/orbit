@@ -13,21 +13,21 @@ export function useKeyboardShortcuts(): void {
     const handler = (e: KeyboardEvent): void => {
       const ctrl = e.ctrlKey || e.metaKey;
 
-      // Ctrl+T — New tab
+      // Ctrl+T â€” New tab
       if (ctrl && e.key === "t") {
         e.preventDefault();
         addTab();
-        logger.info("[Shortcut] Ctrl+T — New tab").catch(console.warn);
+        logger.info("[Shortcut] Ctrl+T â€” New tab").catch(console.warn);
       }
 
-      // Ctrl+W — Close tab
+      // Ctrl+W â€” Close tab
       if (ctrl && e.key === "w") {
         e.preventDefault();
         closeTab(activeTabId);
-        logger.info("[Shortcut] Ctrl+W — Close tab").catch(console.warn);
+        logger.info("[Shortcut] Ctrl+W â€” Close tab").catch(console.warn);
       }
 
-      // Ctrl+L — Focus address bar
+      // Ctrl+L â€” Focus address bar
       if (ctrl && e.key === "l") {
         e.preventDefault();
         const addressBar = document.querySelector<HTMLInputElement>(
