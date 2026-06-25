@@ -1,14 +1,7 @@
 //! browser/mod.rs
 //! Orbit Browser Commands - Stable WebviewWindow Implementation
 //!
-//! Sprint 3 uses WebviewWindow (stable Tauri 2.x API).
-//! The child webview API requires the "unstable" feature flag
-//! which conflicts with Orbit's engineering principle of
-//! building on stable APIs only.
-//!
-//! This implementation is the private concern of WebView2Renderer.
-//! When Tauri stabilizes child webviews, only this file changes.
-//!
+//! Sprint 3: Uses WebviewWindow (stable Tauri 2.x API).
 //! See ADR-0003 and ADR-0004 for rationale.
 
 use std::collections::HashMap;
@@ -20,24 +13,36 @@ use tauri::{
 
 static WEBVIEW_REGISTRY: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
-fn registry() -> std::sync::MutexGuard<'static, Option<HashMap<String, String>>> {
+/// Insert a tab ID -> webview label mapping.
+fn register(id: &str, label: &str) {
     let mut guard = WEBVIEW_REGISTRY.lock().unwrap();
-    if guard.is_none() {
-        *guard = Some(HashMap::new());
-    }
-    guard
+    let map = guard.get_or_insert_with(HashMap::new);
+    map.insert(id.to_string(), label.to_string());
 }
 
+/// Remove and return the webview label for a tab ID.
+fn unregister(id: &str) -> Option<String> {
+    let mut guard = WEBVIEW_REGISTRY.lock().unwrap();
+    guard.as_mut()?.remove(id)
+}
+
+/// Return true if a tab ID is already registered.
+fn is_registered(id: &str) -> bool {
+    let guard = WEBVIEW_REGISTRY.lock().unwrap();
+    guard.as_ref().map_or(false, |m| m.contains_key(id))
+}
+
+/// Get the webview label for a tab ID.
 fn get_label(id: &str) -> Result<String, String> {
-    let reg = registry();
-    reg.as_ref()
+    let guard = WEBVIEW_REGISTRY.lock().unwrap();
+    guard
+        .as_ref()
         .and_then(|m| m.get(id))
         .cloned()
         .ok_or_else(|| format!("No webview registered for tab {id}"))
 }
 
 /// Create a WebviewWindow for a tab.
-/// Positioned to cover the content area of the main window.
 #[tauri::command]
 pub async fn browser_create<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -48,13 +53,11 @@ pub async fn browser_create<R: Runtime>(
     width: f64,
     height: f64,
 ) -> Result<(), String> {
-    // If already registered, just navigate
-    {
-        let reg = registry();
-        if reg.as_ref().map_or(false, |m| m.contains_key(&id)) {
-            drop(reg);
-            return browser_navigate(app, id, url).await;
-        }
+    // Check registration without holding the guard across await
+    let already_registered = is_registered(&id);
+
+    if already_registered {
+        return browser_navigate(app, id, url).await;
     }
 
     let parsed_url = url
@@ -70,10 +73,7 @@ pub async fn browser_create<R: Runtime>(
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut reg = registry();
-    if let Some(map) = reg.as_mut() {
-        map.insert(id, label);
-    }
+    register(&id, &label);
 
     Ok(())
 }
@@ -90,6 +90,7 @@ pub async fn browser_navigate<R: Runtime>(
         .map_err(|e| format!("Invalid URL: {e}"))?;
 
     let label = get_label(&id)?;
+
     app.get_webview_window(&label)
         .ok_or_else(|| format!("Window {label} not found"))?
         .navigate(parsed_url)
@@ -194,7 +195,7 @@ pub async fn browser_can_go_forward<R: Runtime>(
     Ok(false)
 }
 
-/// Update position and size of the browser window.
+/// Update position and size.
 #[tauri::command]
 pub async fn browser_update_bounds<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -252,12 +253,8 @@ pub async fn browser_destroy<R: Runtime>(
     app: tauri::AppHandle<R>,
     id: String,
 ) -> Result<(), String> {
-    let label = {
-        let mut reg = registry();
-        reg.as_mut()
-            .and_then(|m| m.remove(&id))
-            .ok_or_else(|| format!("Webview {id} not registered"))?
-    };
+    let label = unregister(&id)
+        .ok_or_else(|| format!("Webview {id} not registered"))?;
 
     app.get_webview_window(&label)
         .ok_or_else(|| format!("Window {label} not found"))?
