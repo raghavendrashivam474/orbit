@@ -1,4 +1,4 @@
-﻿import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import { ShellLayout } from "@/components/shell/ShellLayout";
 import { HomePage } from "@/pages/home/HomePage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";

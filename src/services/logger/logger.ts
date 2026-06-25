@@ -1,4 +1,4 @@
-﻿import { trace, debug, info, warn, error } from "@tauri-apps/plugin-log";
+import { trace, debug, info, warn, error } from "@tauri-apps/plugin-log";
 
 export const logger = {
   trace: (message: string): Promise<void> => trace(message),

@@ -1,4 +1,4 @@
-﻿import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export function NotFoundPage(): React.JSX.Element {
   const navigate = useNavigate();

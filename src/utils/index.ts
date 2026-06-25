@@ -1,4 +1,4 @@
-﻿export function formatVersion(version: {
+export function formatVersion(version: {
   major: number;
   minor: number;
   patch: number;

@@ -1,4 +1,4 @@
-﻿import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 
 export async function invoke<T>(
   command: string,

@@ -1,4 +1,4 @@
-﻿export function SettingsPage(): React.JSX.Element {
+export function SettingsPage(): React.JSX.Element {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
