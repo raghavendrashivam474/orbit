@@ -1,15 +1,72 @@
+# ==========================
+# Dependencies
+# ==========================
 node_modules/
+.pnpm-store/
+
+# ==========================
+# Build Output
+# ==========================
 dist/
 src-tauri/target/
+
+# ==========================
+# Environment Variables
+# ==========================
 .env
 .env.local
 .env.*.local
-.vscode/
-.idea/
-*.swp
-*.swo
-.DS_Store
-Thumbs.db
+
+# ==========================
+# Logs
+# ==========================
 *.log
 logs/
-.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================
+# IDE
+# ==========================
+.vscode/
+.idea/
+
+# ==========================
+# Editor Files
+# ==========================
+*.swp
+*.swo
+*.tmp
+*.bak
+*~
+
+# ==========================
+# Operating System
+# ==========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================
+# Rust
+# ==========================
+**/*.rs.bk
+
+# ==========================
+# Tauri
+# ==========================
+src-tauri/gen/
+
+# ==========================
+# Testing
+# ==========================
+coverage/
+
+# ==========================
+# Miscellaneous
+# ==========================
+*.pid
+*.seed
+.cache/
