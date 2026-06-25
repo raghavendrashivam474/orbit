@@ -1,20 +1,23 @@
 //! browser/mod.rs
-//! Orbit Browser Commands - Child WebView Implementation
+//! Orbit Browser Commands - Stable WebviewWindow Implementation
 //!
-//! Uses Tauri v2.11.x Window::add_child API to embed
-//! a WebView directly inside the main application window.
+//! Sprint 3 uses WebviewWindow (stable Tauri 2.x API).
+//! The child webview API requires the "unstable" feature flag
+//! which conflicts with Orbit's engineering principle of
+//! building on stable APIs only.
 //!
-//! Each tab gets a unique webview identifier.
-//! The facade manages show/hide/destroy lifecycle.
+//! This implementation is the private concern of WebView2Renderer.
+//! When Tauri stabilizes child webviews, only this file changes.
 //!
-//! See ADR-0003 for architectural rationale.
+//! See ADR-0003 and ADR-0004 for rationale.
 
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tauri::{LogicalPosition, LogicalSize, Manager, Runtime, WebviewBuilder, WebviewUrl};
+use tauri::{
+    LogicalPosition, LogicalSize, Manager, Runtime,
+    WebviewUrl, WebviewWindowBuilder,
+};
 
-/// Registry of active child webview identifiers.
-/// Maps tab ID to webview label.
 static WEBVIEW_REGISTRY: Mutex<Option<HashMap<String, String>>> = Mutex::new(None);
 
 fn registry() -> std::sync::MutexGuard<'static, Option<HashMap<String, String>>> {
@@ -25,8 +28,16 @@ fn registry() -> std::sync::MutexGuard<'static, Option<HashMap<String, String>>>
     guard
 }
 
-/// Create a child webview for a tab and navigate to the given URL.
-/// If a webview with this ID already exists, navigates to the new URL.
+fn get_label(id: &str) -> Result<String, String> {
+    let reg = registry();
+    reg.as_ref()
+        .and_then(|m| m.get(id))
+        .cloned()
+        .ok_or_else(|| format!("No webview registered for tab {id}"))
+}
+
+/// Create a WebviewWindow for a tab.
+/// Positioned to cover the content area of the main window.
 #[tauri::command]
 pub async fn browser_create<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -37,34 +48,26 @@ pub async fn browser_create<R: Runtime>(
     width: f64,
     height: f64,
 ) -> Result<(), String> {
+    // If already registered, just navigate
+    {
+        let reg = registry();
+        if reg.as_ref().map_or(false, |m| m.contains_key(&id)) {
+            drop(reg);
+            return browser_navigate(app, id, url).await;
+        }
+    }
+
     let parsed_url = url
         .parse::<tauri::Url>()
         .map_err(|e| format!("Invalid URL: {e}"))?;
 
-    let window = app
-        .get_webview_window("main")
-        .ok_or_else(|| "Main window not found".to_string())?;
-
-    // Check if webview already exists
-    {
-        let reg = registry();
-        if let Some(map) = reg.as_ref() {
-            if map.contains_key(&id) {
-                drop(reg);
-                return browser_navigate(app, id, url).await;
-            }
-        }
-    }
-
-    // Create child webview
     let label = format!("browser-{id}");
-    let _webview = window
-        .add_child(
-            WebviewBuilder::new(&label, WebviewUrl::External(parsed_url))
-                .auto_resize(),
-            LogicalPosition::new(x, y),
-            LogicalSize::new(width, height),
-        )
+
+    WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed_url))
+        .decorations(false)
+        .position(x, y)
+        .inner_size(width, height)
+        .build()
         .map_err(|e| e.to_string())?;
 
     let mut reg = registry();
@@ -75,7 +78,7 @@ pub async fn browser_create<R: Runtime>(
     Ok(())
 }
 
-/// Navigate an existing child webview to a new URL.
+/// Navigate to a new URL.
 #[tauri::command]
 pub async fn browser_navigate<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -87,9 +90,8 @@ pub async fn browser_navigate<R: Runtime>(
         .map_err(|e| format!("Invalid URL: {e}"))?;
 
     let label = get_label(&id)?;
-
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .navigate(parsed_url)
         .map_err(|e| e.to_string())
 }
@@ -101,21 +103,21 @@ pub async fn browser_reload<R: Runtime>(
     id: String,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .eval("window.location.reload()")
         .map_err(|e| e.to_string())
 }
 
-/// Stop the current page load.
+/// Stop loading.
 #[tauri::command]
 pub async fn browser_stop<R: Runtime>(
     app: tauri::AppHandle<R>,
     id: String,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .eval("window.stop()")
         .map_err(|e| e.to_string())
 }
@@ -127,8 +129,8 @@ pub async fn browser_back<R: Runtime>(
     id: String,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .eval("window.history.back()")
         .map_err(|e| e.to_string())
 }
@@ -140,8 +142,8 @@ pub async fn browser_forward<R: Runtime>(
     id: String,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .eval("window.history.forward()")
         .map_err(|e| e.to_string())
 }
@@ -153,10 +155,10 @@ pub async fn browser_get_title<R: Runtime>(
     id: String,
 ) -> Result<String, String> {
     let label = get_label(&id)?;
-    let webview = app
-        .get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?;
-    webview.title().map_err(|e| e.to_string())
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
+        .title()
+        .map_err(|e| e.to_string())
 }
 
 /// Get the current URL.
@@ -166,10 +168,11 @@ pub async fn browser_get_url<R: Runtime>(
     id: String,
 ) -> Result<String, String> {
     let label = get_label(&id)?;
-    let webview = app
-        .get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?;
-    webview.url().map(|u| u.to_string()).map_err(|e| e.to_string())
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
+        .url()
+        .map(|u| u.to_string())
+        .map_err(|e| e.to_string())
 }
 
 /// Check if back navigation is available.
@@ -179,10 +182,7 @@ pub async fn browser_can_go_back<R: Runtime>(
     id: String,
 ) -> Result<bool, String> {
     let label = get_label(&id)?;
-    if app.get_webview(&label).is_some() {
-        return Ok(true);
-    }
-    Ok(false)
+    Ok(app.get_webview_window(&label).is_some())
 }
 
 /// Check if forward navigation is available.
@@ -194,7 +194,7 @@ pub async fn browser_can_go_forward<R: Runtime>(
     Ok(false)
 }
 
-/// Update the position and size of a child webview.
+/// Update position and size of the browser window.
 #[tauri::command]
 pub async fn browser_update_bounds<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -205,48 +205,48 @@ pub async fn browser_update_bounds<R: Runtime>(
     height: f64,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    let webview = app
-        .get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?;
+    let window = app
+        .get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?;
 
-    webview
+    window
         .set_position(LogicalPosition::new(x, y))
         .map_err(|e| e.to_string())?;
 
-    webview
+    window
         .set_size(LogicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
-/// Show a child webview.
+/// Show the browser window.
 #[tauri::command]
 pub async fn browser_show<R: Runtime>(
     app: tauri::AppHandle<R>,
     id: String,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .show()
         .map_err(|e| e.to_string())
 }
 
-/// Hide a child webview.
+/// Hide the browser window.
 #[tauri::command]
 pub async fn browser_hide<R: Runtime>(
     app: tauri::AppHandle<R>,
     id: String,
 ) -> Result<(), String> {
     let label = get_label(&id)?;
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .hide()
         .map_err(|e| e.to_string())
 }
 
-/// Destroy a child webview and remove it from the registry.
+/// Destroy the browser window.
 #[tauri::command]
 pub async fn browser_destroy<R: Runtime>(
     app: tauri::AppHandle<R>,
@@ -259,17 +259,8 @@ pub async fn browser_destroy<R: Runtime>(
             .ok_or_else(|| format!("Webview {id} not registered"))?
     };
 
-    app.get_webview(&label)
-        .ok_or_else(|| format!("Webview {label} not found"))?
+    app.get_webview_window(&label)
+        .ok_or_else(|| format!("Window {label} not found"))?
         .close()
         .map_err(|e| e.to_string())
-}
-
-/// Helper: get the webview label for a tab ID.
-fn get_label(id: &str) -> Result<String, String> {
-    let reg = registry();
-    reg.as_ref()
-        .and_then(|m| m.get(id))
-        .cloned()
-        .ok_or_else(|| format!("No webview registered for tab {id}"))
 }
