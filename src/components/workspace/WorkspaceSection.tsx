@@ -15,10 +15,11 @@ export function WorkspaceSection({ collapsed }: WorkspaceSectionProps): React.JS
 
   return (
     <>
-      <div className="px-2 pb-2">
+      <div className="py-1">
+        {/* Section header — expanded only */}
         {!collapsed && (
-          <div className="flex items-center justify-between px-2 mb-2 mt-1">
-            <span className="text-[10px] font-[var(--weight-semibold)] text-[var(--text-muted)] uppercase tracking-wider">
+          <div className="flex items-center justify-between px-3 mb-1.5 h-6">
+            <span className="text-[10px] font-[var(--weight-semibold)] text-[var(--text-muted)] uppercase tracking-[0.08em]">
               Workspaces
             </span>
             <Tooltip content="New workspace" side="right">
@@ -30,16 +31,20 @@ export function WorkspaceSection({ collapsed }: WorkspaceSectionProps): React.JS
                   "flex items-center justify-center",
                   "text-[var(--text-muted)] hover:text-[var(--accent)]",
                   "hover:bg-[var(--elevated)]",
-                  "transition-all duration-[var(--duration-fast)]",
+                  "transition-all duration-200 ease-out",
                 ].join(" ")}
               >
-                <Plus size={13} strokeWidth={2.5} />
+                <Plus size={12} strokeWidth={2.5} />
               </button>
             </Tooltip>
           </div>
         )}
 
-        <div className="space-y-1">
+        {/* Workspace items — flex column with explicit gap */}
+        <div className={[
+          "flex flex-col",
+          collapsed ? "px-1.5 gap-1" : "pr-2 gap-0.5",
+        ].join(" ")}>
           {workspaces.map((workspace) => (
             <WorkspaceItem
               key={workspace.id}
@@ -51,22 +56,25 @@ export function WorkspaceSection({ collapsed }: WorkspaceSectionProps): React.JS
           ))}
         </div>
 
+        {/* Add button — collapsed only */}
         {collapsed && (
-          <Tooltip content="New workspace" side="right">
-            <button
-              onClick={() => setDialogOpen(true)}
-              aria-label="Create workspace"
-              className={[
-                "w-full flex items-center justify-center mt-1",
-                "h-8 rounded-[var(--radius-md)]",
-                "text-[var(--text-muted)] hover:text-[var(--accent)]",
-                "hover:bg-[var(--elevated)]",
-                "transition-all duration-[var(--duration-fast)]",
-              ].join(" ")}
-            >
-              <Plus size={14} strokeWidth={2} />
-            </button>
-          </Tooltip>
+          <div className="px-1.5 mt-1">
+            <Tooltip content="New workspace" side="right">
+              <button
+                onClick={() => setDialogOpen(true)}
+                aria-label="Create workspace"
+                className={[
+                  "w-full flex items-center justify-center",
+                  "h-9 rounded-[var(--radius-md)]",
+                  "text-[var(--text-muted)] hover:text-[var(--accent)]",
+                  "hover:bg-[var(--elevated)]",
+                  "transition-all duration-200 ease-out",
+                ].join(" ")}
+              >
+                <Plus size={15} strokeWidth={2} />
+              </button>
+            </Tooltip>
+          </div>
         )}
       </div>
 
