@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { useTabStore, type Tab } from "@/store/tabStore";
+import { WebviewSync } from "@/browser/WebviewSync";
 
 interface TabProps {
   tab: Tab;
@@ -8,6 +9,12 @@ interface TabProps {
 export function TabComponent({ tab }: TabProps): React.JSX.Element {
   const { activeTabId, setActiveTab, closeTab } = useTabStore();
   const isActive = tab.id === activeTabId;
+
+  const handleClose = (e: React.MouseEvent): void => {
+    e.stopPropagation();
+    WebviewSync.destroyWebview(tab.id).catch(() => {});
+    closeTab(tab.id);
+  };
 
   return (
     <div
@@ -25,28 +32,21 @@ export function TabComponent({ tab }: TabProps): React.JSX.Element {
           : "bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text)]",
       ].join(" ")}
     >
-      {/* Active indicator */}
       {isActive && (
         <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--accent)] rounded-t-full" />
       )}
 
-      {/* Favicon placeholder */}
       <div className="w-4 h-4 rounded-[var(--radius-sm)] bg-[var(--elevated)] flex-shrink-0 flex items-center justify-center">
         <div className="w-2 h-2 rounded-full bg-[var(--border)]" />
       </div>
 
-      {/* Title */}
       <span className="flex-1 text-[var(--text-sm)] orbit-truncate">
         {tab.title}
       </span>
 
-      {/* Close button */}
       <button
         aria-label={`Close ${tab.title}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          closeTab(tab.id);
-        }}
+        onClick={handleClose}
         className={[
           "flex-shrink-0 w-4 h-4 rounded-[var(--radius-sm)]",
           "flex items-center justify-center",

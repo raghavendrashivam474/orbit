@@ -9,15 +9,12 @@ import { CommandPalette } from "@/components/palette/CommandPalette";
 import { useTheme } from "@/hooks/useTheme";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useTabStore } from "@/store/tabStore";
-import { useBrowserStore } from "@/store/browserStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
-import { browserFacade } from "@/browser/BrowserFacade";
 import { workspaceFacade } from "@/workspace/WorkspaceFacade";
 import { PersistenceService } from "@/services/persistence/PersistenceService";
-import { SessionRepository } from "@/repositories/SessionRepository";
+import { WebviewSync } from "@/browser/WebviewSync";
 import { LAYOUT } from "@/layout/LayoutConstants";
-import { invoke } from "@/core/ipc/bridge";
 
 const PURE_SHELL_ROUTES = [
   "/settings",
@@ -33,14 +30,13 @@ export function ShellLayout(): React.JSX.Element {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { tabs, activeTabId } = useTabStore();
-  const { tabStates, initTabState } = useBrowserStore();
+  const { activeTabId, getActiveTab } = useTabStore();
   const { activeWorkspaceId } = useWorkspaceStore();
   const {
-    initialize:          initSettings,
+    initialize:       initSettings,
     sidebarCollapsed,
     setSidebarCollapsed,
-    initialized:         settingsReady,
+    initialized:      settingsReady,
   } = useSettingsStore();
 
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -50,65 +46,66 @@ export function ShellLayout(): React.JSX.Element {
     ? LAYOUT.SIDEBAR_COLLAPSED
     : LAYOUT.SIDEBAR_EXPANDED;
 
-  const activeTabState = activeTabId ? tabStates[activeTabId] : null;
-  const tabHasUrl      = !!(activeTabState?.url && activeTabState.url !== "about:blank");
+  const activeTab = getActiveTab();
+  const tabHasUrl = !!activeTab?.url;
 
   const isPureShellPage = PURE_SHELL_ROUTES.includes(location.pathname);
   const isHomePage      = location.pathname === "/";
+  const showHomePageUI  = isHomePage && !tabHasUrl;
+  const showShellPage   = isPureShellPage || showHomePageUI;
 
-  const showHomePageUI = isHomePage && !tabHasUrl;
-  const showShellPage  = isPureShellPage || showHomePageUI;
-  const showBrowser    = !showShellPage;
-
-  // Hide ALL webviews when on shell page. Show only the active tab's webview when on browser.
+  // Hide webview when on shell page, show when leaving
   useEffect(() => {
-    if (!activeTabId) return;
-
     if (showShellPage) {
-      // Hide every webview that exists
-      tabs.forEach((tab) => {
-        const state = tabStates[tab.id];
-        if (state?.url) {
-          invoke("browser_hide", { id: tab.id }).catch(() => {});
-        }
-      });
+      WebviewSync.hideAll();
     } else {
-      // Hide all OTHER tabs, show only active
-      tabs.forEach((tab) => {
-        if (tab.id === activeTabId) return;
-        const state = tabStates[tab.id];
-        if (state?.url) {
-          invoke("browser_hide", { id: tab.id }).catch(() => {});
-        }
-      });
-
-      // Show the active tab if it has a URL
-      const activeState = tabStates[activeTabId];
-      if (activeState?.url) {
-        invoke("browser_show", { id: activeTabId }).catch(() => {});
-      }
+      WebviewSync.resume();
     }
-  }, [location.pathname, activeTabId, showShellPage, tabs, tabStates]);
+  }, [showShellPage]);
 
-  // Navigate to Home on workspace switch
+  // Sync webview visibility when active tab changes
   useEffect(() => {
-    if (activeWorkspaceId) {
-      navigate("/");
+    if (!showShellPage) {
+      WebviewSync.sync();
     }
-  }, [activeWorkspaceId, navigate]);
+  }, [activeTabId, showShellPage]);
 
-  // Navigate to Home when Ctrl+T fires
+  // Sync when workspace changes
   useEffect(() => {
-    const handler = (): void => navigate("/");
-    window.addEventListener("orbit:navigate-home", handler);
-    return () => window.removeEventListener("orbit:navigate-home", handler);
-  }, [navigate]);
+    if (!showShellPage) {
+      WebviewSync.sync();
+    }
+  }, [activeWorkspaceId, showShellPage]);
 
+  // Update bounds when sidebar changes
+  useEffect(() => {
+    WebviewSync.computeBoundsFromSidebar();
+  }, [sidebarCollapsed]);
+
+  // Update bounds on window resize
+  useEffect(() => {
+    const handler = (): void => WebviewSync.computeBoundsFromSidebar();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  // App startup
   useEffect(() => {
     const init = async (): Promise<void> => {
       await initSettings().catch(console.warn);
       await workspaceFacade.initialize().catch(console.warn);
       useWorkspaceStore.getState().setInitialized(true);
+
+      // Ensure at least one tab exists for the active workspace
+      const ws = useWorkspaceStore.getState().activeWorkspaceId;
+      if (ws) {
+        const wsTabs = useTabStore.getState().getWorkspaceTabs(ws);
+        if (wsTabs.length === 0) {
+          useTabStore.getState().addTab(ws);
+        }
+      }
+
+      WebviewSync.computeBoundsFromSidebar();
       setAppReady(true);
     };
     init();
@@ -119,36 +116,19 @@ export function ShellLayout(): React.JSX.Element {
     return () => PersistenceService.stop();
   }, []);
 
+  // Navigate to / when workspace switches
   useEffect(() => {
-    tabs.forEach((tab) => {
-      const state = browserFacade.getSessionState(tab.id);
-      if (!state) {
-        browserFacade.registerTab(tab.id);
-        initTabState(tab.id);
-      }
-    });
-  }, [tabs, initTabState]);
-
-  useEffect(() => {
-    if (activeTabId) {
-      browserFacade.activateTab(activeTabId).catch(console.warn);
+    if (activeWorkspaceId && appReady) {
+      navigate("/");
     }
-  }, [activeTabId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkspaceId]);
 
   useEffect(() => {
-    const handleUnload = (): void => {
-      const { tabs: currentTabs, activeTabId: currentActiveTab } = useTabStore.getState();
-      const tabsToSave = currentTabs.map((tab, i) => ({
-        tab_id:   tab.id,
-        url:      tab.url ?? "",
-        title:    tab.title ?? "New Tab",
-        position: i,
-      }));
-      SessionRepository.save(currentActiveTab, tabsToSave).catch(console.warn);
-    };
-    window.addEventListener("beforeunload", handleUnload);
-    return () => window.removeEventListener("beforeunload", handleUnload);
-  }, []);
+    const handler = (): void => navigate("/");
+    window.addEventListener("orbit:navigate-home", handler);
+    return () => window.removeEventListener("orbit:navigate-home", handler);
+  }, [navigate]);
 
   useEffect(() => {
     const handler = (e: Event): void => {
@@ -169,9 +149,6 @@ export function ShellLayout(): React.JSX.Element {
             <circle cx="28" cy="28" r="8" fill="var(--color-primary)" />
             <ellipse cx="28" cy="28" rx="26" ry="12"
               stroke="var(--color-primary)" strokeWidth="1.5" fill="none" opacity="0.7" />
-            <ellipse cx="28" cy="28" rx="26" ry="12"
-              stroke="var(--color-purple)" strokeWidth="1.5" fill="none" opacity="0.5"
-              transform="rotate(60 28 28)" />
           </svg>
           <p className="text-[var(--text-xs)] text-[var(--text-muted)]">Starting Orbit...</p>
         </div>
@@ -201,7 +178,7 @@ export function ShellLayout(): React.JSX.Element {
             </div>
           )}
 
-          {showBrowser && (
+          {!showShellPage && (
             <div className="absolute inset-0" style={{ zIndex: 10 }}>
               <BrowserView sidebarWidth={sidebarWidth} />
             </div>

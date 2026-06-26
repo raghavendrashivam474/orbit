@@ -1,98 +1,85 @@
-/**
- * tabStore.ts
- * Orbit Tab Store - Sprint 5: Workspace-aware
- *
- * Every tab carries a workspaceId.
- * New tabs auto-assign to the currently active workspace.
- */
-
 import { create } from "zustand";
-import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export interface Tab {
   id:          string;
   workspaceId: string;
-  title:       string;
   url:         string;
+  title:       string;
   isLoading:   boolean;
-  rendererId?: string;
-}
-
-function getActiveWorkspaceId(): string {
-  return useWorkspaceStore.getState().activeWorkspaceId ?? "workspace-personal";
-}
-
-function createTab(overrides: Partial<Tab> = {}): Tab {
-  return {
-    id:          crypto.randomUUID(),
-    workspaceId: overrides.workspaceId ?? getActiveWorkspaceId(),
-    title:       "New Tab",
-    url:         "",
-    isLoading:   false,
-    ...overrides,
-  };
+  canGoBack:   boolean;
+  canGoForward:boolean;
 }
 
 interface TabState {
   tabs:         Tab[];
   activeTabId:  string;
 
-  addTab:       (overrides?: Partial<Tab>) => void;
+  addTab:       (workspaceId: string, url?: string) => Tab;
   closeTab:     (id: string) => void;
-  removeTab:    (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab:    (id: string, updates: Partial<Tab>) => void;
+  getTab:       (id: string) => Tab | undefined;
+  getActiveTab: () => Tab | undefined;
   getWorkspaceTabs: (workspaceId: string) => Tab[];
 }
 
-const initialTab = createTab({ title: "Home", url: "" });
+function newTab(workspaceId: string, url = ""): Tab {
+  return {
+    id:           crypto.randomUUID(),
+    workspaceId,
+    url,
+    title:        url ? "Loading..." : "New Tab",
+    isLoading:    false,
+    canGoBack:    false,
+    canGoForward: false,
+  };
+}
 
 export const useTabStore = create<TabState>()((set, get) => ({
-  tabs:        [initialTab],
-  activeTabId: initialTab.id,
+  tabs:        [],
+  activeTabId: "",
 
-  addTab: (overrides = {}): void => {
-    const tab = createTab(overrides);
-    set((state) => ({
-      tabs:        [...state.tabs, tab],
+  addTab: (workspaceId, url = "") => {
+    const tab = newTab(workspaceId, url);
+    set((s) => ({
+      tabs:        [...s.tabs, tab],
       activeTabId: tab.id,
     }));
+    return tab;
   },
 
-  closeTab: (id: string): void => {
+  closeTab: (id) => {
     const { tabs, activeTabId } = get();
-    const activeWorkspaceId = getActiveWorkspaceId();
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
 
-    // Only consider tabs in current workspace for fallback selection
-    const workspaceTabs = tabs.filter((t) => t.workspaceId === activeWorkspaceId);
+    const workspaceTabs = tabs.filter((t) => t.workspaceId === tab.workspaceId);
     if (workspaceTabs.length <= 1) return;
 
-    const index = workspaceTabs.findIndex((t) => t.id === id);
-    const next  = workspaceTabs[index === 0 ? 1 : index - 1];
+    const remaining = tabs.filter((t) => t.id !== id);
+    let newActive = activeTabId;
 
-    set({
-      tabs:        tabs.filter((t) => t.id !== id),
-      activeTabId: activeTabId === id ? (next?.id ?? "") : activeTabId,
-    });
+    if (activeTabId === id) {
+      const wsRemaining = remaining.filter((t) => t.workspaceId === tab.workspaceId);
+      const idx = workspaceTabs.findIndex((t) => t.id === id);
+      newActive = wsRemaining[idx === 0 ? 0 : idx - 1]?.id ?? "";
+    }
+
+    set({ tabs: remaining, activeTabId: newActive });
   },
 
-  removeTab: (id: string): void => {
-    set((state) => ({
-      tabs: state.tabs.filter((t) => t.id !== id),
-    }));
+  setActiveTab: (id) => set({ activeTabId: id }),
+
+  updateTab: (id, updates) =>
+    set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, ...updates } : t)) })),
+
+  getTab: (id) => get().tabs.find((t) => t.id === id),
+
+  getActiveTab: () => {
+    const { tabs, activeTabId } = get();
+    return tabs.find((t) => t.id === activeTabId);
   },
 
-  setActiveTab: (id: string): void => {
-    set({ activeTabId: id });
-  },
-
-  updateTab: (id: string, updates: Partial<Tab>): void => {
-    set((state) => ({
-      tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-    }));
-  },
-
-  getWorkspaceTabs: (workspaceId: string): Tab[] => {
-    return get().tabs.filter((t) => t.workspaceId === workspaceId);
-  },
+  getWorkspaceTabs: (workspaceId) =>
+    get().tabs.filter((t) => t.workspaceId === workspaceId),
 }));

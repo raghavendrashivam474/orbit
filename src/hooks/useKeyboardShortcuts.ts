@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { register, isRegistered, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useTabStore } from "@/store/tabStore";
-import { browserFacade } from "@/browser/BrowserFacade";
+import { useWorkspaceStore } from "@/store/workspaceStore";
+import { WebviewSync } from "@/browser/WebviewSync";
 
 const SHORTCUTS = [
   "CmdOrCtrl+T",
@@ -20,42 +21,42 @@ export function useKeyboardShortcuts(): void {
   useEffect(() => {
     const handler = (e: Event): void => {
       const shortcut = (e as CustomEvent<string>).detail;
-      const store = useTabStore.getState();
+      const tabStore = useTabStore.getState();
+      const wsStore  = useWorkspaceStore.getState();
 
       switch (shortcut) {
-        case "CmdOrCtrl+T":
-        case "new_tab":
-          store.addTab();
-          // Navigate to Home so the new tab shows Home page
-          window.dispatchEvent(new CustomEvent("orbit:navigate-home"));
+        case "CmdOrCtrl+T": {
+          const ws = wsStore.activeWorkspaceId;
+          if (ws) {
+            tabStore.addTab(ws);
+            window.dispatchEvent(new CustomEvent("orbit:navigate-home"));
+          }
           break;
-
-        case "CmdOrCtrl+W":
-        case "close_tab":
-          store.closeTab(store.activeTabId);
+        }
+        case "CmdOrCtrl+W": {
+          const activeId = tabStore.activeTabId;
+          if (activeId) {
+            WebviewSync.destroyWebview(activeId).catch(() => {});
+            tabStore.closeTab(activeId);
+          }
           break;
-
-        case "CmdOrCtrl+L":
-        case "focus_address": {
+        }
+        case "CmdOrCtrl+L": {
           const bar = document.querySelector<HTMLInputElement>(
             "input[aria-label='Address bar']"
           );
           if (bar) { bar.focus(); bar.select(); }
           break;
         }
-
         case "CmdOrCtrl+R":
-        case "reload_page":
         case "F5":
-          browserFacade.reload().catch(console.warn);
+          WebviewSync.reload().catch(() => {});
           break;
-
         case "Alt+Left":
-          browserFacade.back().catch(console.warn);
+          WebviewSync.back().catch(() => {});
           break;
-
         case "Alt+Right":
-          browserFacade.forward().catch(console.warn);
+          WebviewSync.forward().catch(() => {});
           break;
       }
     };
@@ -77,9 +78,7 @@ export function useKeyboardShortcuts(): void {
               );
             }
           });
-        } catch {
-          // Already registered
-        }
+        } catch {}
       }
     };
     setup();
@@ -88,9 +87,7 @@ export function useKeyboardShortcuts(): void {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") {
-        browserFacade.stop().catch(console.warn);
-      }
+      if (e.key === "Escape") WebviewSync.stop().catch(() => {});
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
