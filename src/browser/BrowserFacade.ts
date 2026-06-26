@@ -1,12 +1,3 @@
-/**
- * BrowserFacade.ts
- * Orbit Browser Layer - Public API
- *
- * Single entry point for all browser operations.
- * Shell and UI components use this exclusively.
- * See ADR-0003 for architectural rationale.
- */
-
 import type { RendererInterface } from "./RendererInterface";
 import type { BrowserEvent, BrowserEventType } from "./BrowserEvents";
 import type { RendererSession } from "./RendererSession";
@@ -18,6 +9,8 @@ import { createRendererSession } from "./RendererSession";
 import { LayoutManager } from "@/layout/LayoutManager";
 import { resolveUrl } from "@/services/navigation/urlResolver";
 import { useBrowserStore } from "@/store/browserStore";
+import { invoke } from "@/core/ipc/bridge";
+import { logger } from "@/services/logger/logger";
 
 interface TabEntry {
   session:  RendererSession;
@@ -34,31 +27,52 @@ class BrowserFacade {
   registerTab(tabId: string, initialUrl = ""): void {
     if (this.tabs.has(tabId)) return;
     const session  = createRendererSession(tabId, initialUrl);
-    const renderer = new WebView2Renderer(`browser-${tabId}`);
+    const renderer = new WebView2Renderer(tabId);
     this.tabs.set(tabId, { session, renderer });
     useBrowserStore.getState().initTabState(tabId, initialUrl);
+    logger.info("[Facade] registerTab " + tabId.slice(0, 8)).catch(() => {});
+  }
+
+  private async hideAllExcept(exceptTabId: string | null): Promise<void> {
+    const summary = Array.from(this.tabs.entries())
+      .map(([id, e]) => id.slice(0, 8) + (e.session.state.url ? "(url)" : "(empty)"))
+      .join(", ");
+    logger.info("[Facade] hideAllExcept except=" + (exceptTabId?.slice(0,8) ?? "null") + " tabs=[" + summary + "]").catch(() => {});
+
+    for (const [tabId, entry] of this.tabs) {
+      if (tabId === exceptTabId) continue;
+      if (!entry.session.state.url) continue;
+      logger.info("[Facade] HIDING " + tabId.slice(0, 8)).catch(() => {});
+      await invoke<void>("browser_hide", { id: tabId }).catch((e) => {
+        logger.warn("[Facade] hide FAILED " + e).catch(() => {});
+      });
+    }
   }
 
   async activateTab(tabId: string): Promise<void> {
+    logger.info("[Facade] activateTab " + tabId.slice(0, 8)).catch(() => {});
     const entry = this.tabs.get(tabId);
-    if (!entry) return;
+    if (!entry) {
+      logger.warn("[Facade] activateTab NO ENTRY for " + tabId.slice(0,8)).catch(() => {});
+      return;
+    }
+
+    await this.hideAllExcept(tabId);
 
     if (this.activeTabId && this.activeTabId !== tabId) {
       const prev = this.tabs.get(this.activeTabId);
-      if (prev) {
-        prev.session.isActive = false;
-        await prev.renderer.hide().catch(console.warn);
-      }
+      if (prev) prev.session.isActive = false;
     }
 
     entry.session.isActive = true;
     this.activeTabId = tabId;
 
-    await entry.renderer.show().catch(console.warn);
-    await entry.renderer.updateBounds(this.currentBounds).catch(console.warn);
-
     if (entry.session.state.url && !entry.session.state.error) {
-      await entry.renderer.navigate(entry.session.state.url).catch(console.warn);
+      logger.info("[Facade] SHOWING " + tabId.slice(0, 8)).catch(() => {});
+      await entry.renderer.show().catch(() => {});
+      await entry.renderer.updateBounds(this.currentBounds).catch(() => {});
+    } else {
+      logger.info("[Facade] tab has no URL, not showing").catch(() => {});
     }
 
     this.startPolling();
@@ -67,7 +81,7 @@ class BrowserFacade {
   async destroyTab(tabId: string): Promise<void> {
     const entry = this.tabs.get(tabId);
     if (!entry) return;
-    await entry.renderer.destroy().catch(console.warn);
+    await entry.renderer.destroy().catch(() => {});
     this.tabs.delete(tabId);
     useBrowserStore.getState().removeTabState(tabId);
   }
@@ -78,8 +92,8 @@ class BrowserFacade {
 
     if (this.activeTabId) {
       const entry = this.tabs.get(this.activeTabId);
-      if (entry) {
-        await entry.renderer.updateBounds(bounds).catch(console.warn);
+      if (entry && entry.session.state.url) {
+        await entry.renderer.updateBounds(bounds).catch(() => {});
       }
     }
   }
@@ -117,7 +131,7 @@ class BrowserFacade {
     const entry = this.tabs.get(this.activeTabId);
     if (!entry) return;
     this.updateTabState(this.activeTabId, { isLoading: true, progress: 0 });
-    await entry.renderer.reload().catch(console.warn);
+    await entry.renderer.reload().catch(() => {});
   }
 
   async stop(): Promise<void> {
@@ -125,19 +139,19 @@ class BrowserFacade {
     const entry = this.tabs.get(this.activeTabId);
     if (!entry) return;
     this.updateTabState(this.activeTabId, { isLoading: false });
-    await entry.renderer.stop().catch(console.warn);
+    await entry.renderer.stop().catch(() => {});
   }
 
   async back(): Promise<void> {
     if (!this.activeTabId) return;
     const entry = this.tabs.get(this.activeTabId);
-    if (entry) await entry.renderer.back().catch(console.warn);
+    if (entry) await entry.renderer.back().catch(() => {});
   }
 
   async forward(): Promise<void> {
     if (!this.activeTabId) return;
     const entry = this.tabs.get(this.activeTabId);
-    if (entry) await entry.renderer.forward().catch(console.warn);
+    if (entry) await entry.renderer.forward().catch(() => {});
   }
 
   private startPolling(): void {
@@ -146,6 +160,7 @@ class BrowserFacade {
       if (!this.activeTabId) return;
       const entry = this.tabs.get(this.activeTabId);
       if (!entry) return;
+      if (!entry.session.state.url) return;
       try {
         const [title, url, canGoBack, canGoForward] = await Promise.all([
           entry.renderer.getTitle(),
@@ -161,7 +176,7 @@ class BrowserFacade {
           type: "history:update", tabId: this.activeTabId, canGoBack, canGoForward,
         });
       } catch {
-        // Renderer not ready
+        // Not ready
       }
     }, 500);
   }

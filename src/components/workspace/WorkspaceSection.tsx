@@ -1,9 +1,3 @@
-/**
- * WorkspaceSection.tsx
- * Workspace section rendered inside the sidebar.
- * Sits above the existing navigation items.
- */
-
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { WorkspaceItem } from "./WorkspaceItem";
@@ -21,11 +15,10 @@ export function WorkspaceSection({ collapsed }: WorkspaceSectionProps): React.JS
 
   return (
     <>
-      <div className="px-2 pb-1">
-        {/* Section label */}
+      <div className="px-2 pb-2">
         {!collapsed && (
-          <div className="flex items-center justify-between px-1 mb-1">
-            <span className="text-[var(--text-xs)] font-[var(--weight-medium)] text-[var(--text-muted)] uppercase tracking-wider">
+          <div className="flex items-center justify-between px-2 mb-2 mt-1">
+            <span className="text-[10px] font-[var(--weight-semibold)] text-[var(--text-muted)] uppercase tracking-wider">
               Workspaces
             </span>
             <Tooltip content="New workspace" side="right">
@@ -35,19 +28,18 @@ export function WorkspaceSection({ collapsed }: WorkspaceSectionProps): React.JS
                 className={[
                   "w-5 h-5 rounded-[var(--radius-sm)]",
                   "flex items-center justify-center",
-                  "text-[var(--text-muted)] hover:text-[var(--text)]",
+                  "text-[var(--text-muted)] hover:text-[var(--accent)]",
                   "hover:bg-[var(--elevated)]",
                   "transition-all duration-[var(--duration-fast)]",
                 ].join(" ")}
               >
-                <Plus size={12} strokeWidth={2.5} />
+                <Plus size={13} strokeWidth={2.5} />
               </button>
             </Tooltip>
           </div>
         )}
 
-        {/* Workspace items */}
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {workspaces.map((workspace) => (
             <WorkspaceItem
               key={workspace.id}
@@ -59,16 +51,15 @@ export function WorkspaceSection({ collapsed }: WorkspaceSectionProps): React.JS
           ))}
         </div>
 
-        {/* Add button when collapsed */}
         {collapsed && (
           <Tooltip content="New workspace" side="right">
             <button
               onClick={() => setDialogOpen(true)}
               aria-label="Create workspace"
               className={[
-                "w-full flex items-center justify-center mt-0.5",
+                "w-full flex items-center justify-center mt-1",
                 "h-8 rounded-[var(--radius-md)]",
-                "text-[var(--text-muted)] hover:text-[var(--text)]",
+                "text-[var(--text-muted)] hover:text-[var(--accent)]",
                 "hover:bg-[var(--elevated)]",
                 "transition-all duration-[var(--duration-fast)]",
               ].join(" ")}

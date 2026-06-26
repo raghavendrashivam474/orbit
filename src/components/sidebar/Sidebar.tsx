@@ -1,18 +1,6 @@
 /**
  * Sidebar.tsx
- * Orbit Sidebar â€” Sprint 5: Workspace section added.
- *
- * Layout:
- *   Workspaces (new section)
- *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *   Home
- *   History
- *   Bookmarks
- *   Downloads
- *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *   Settings
- *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
- *   Collapse toggle
+ * Orbit Sidebar - Sprint 5
  */
 
 import {
@@ -56,12 +44,10 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps): React.J
       aria-label="Primary navigation"
     >
       <div className="flex-1 overflow-y-auto orbit-scrollbar pt-2">
-        {/* Workspace section */}
         <WorkspaceSection collapsed={collapsed} />
 
         <Divider className="mx-2 my-2" />
 
-        {/* Primary navigation */}
         <nav className="px-2 space-y-0.5">
           {NAV_ITEMS.map((item) => (
             <SidebarItem
@@ -77,7 +63,6 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps): React.J
 
       <Divider />
 
-      {/* Settings */}
       <div className="p-2">
         <SidebarItem
           icon={<Settings size={16} strokeWidth={2} />}
@@ -89,7 +74,6 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps): React.J
 
       <Divider />
 
-      {/* Collapse toggle */}
       <div className="p-2">
         <Tooltip
           content={collapsed ? "Expand sidebar" : "Collapse sidebar"}

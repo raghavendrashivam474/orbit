@@ -1,11 +1,6 @@
-/**
- * CreateWorkspaceDialog.tsx
- * Dialog for creating a new workspace.
- */
-
 import { useState } from "react";
 import { X } from "lucide-react";
-import { WORKSPACE_COLORS, WORKSPACE_EMOJIS } from "@/workspace/WorkspaceTypes";
+import { WORKSPACE_COLORS, WORKSPACE_EMOJIS, DEFAULT_WORKSPACE_EMOJI } from "@/workspace/WorkspaceTypes";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 interface CreateWorkspaceDialogProps {
@@ -20,7 +15,7 @@ export function CreateWorkspaceDialog({
   const { create } = useWorkspace();
 
   const [name,  setName]  = useState("");
-  const [icon,  setIcon]  = useState("ðŸ ");
+  const [icon,  setIcon]  = useState<string>(DEFAULT_WORKSPACE_EMOJI);
   const [color, setColor] = useState("#3B82F6");
   const [busy,  setBusy]  = useState(false);
   const [error, setError] = useState("");
@@ -34,7 +29,7 @@ export function CreateWorkspaceDialog({
 
     try {
       await create({ name: name.trim(), icon, iconType: "emoji", color });
-      setName(""); setIcon("ðŸ "); setColor("#3B82F6");
+      setName(""); setIcon(DEFAULT_WORKSPACE_EMOJI); setColor("#3B82F6");
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create workspace.");
@@ -50,13 +45,12 @@ export function CreateWorkspaceDialog({
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
 
       <div className={[
-        "fixed top-[25%] left-1/2 -translate-x-1/2 z-50",
+        "fixed top-[15%] left-1/2 -translate-x-1/2 z-50",
         "w-full max-w-md",
         "bg-[var(--elevated)] border border-[var(--border)]",
         "rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)]",
         "animate-scale-in overflow-hidden",
       ].join(" ")}>
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
           <h2 className="text-[var(--text-base)] font-[var(--weight-semibold)] text-[var(--text)]">
             New Workspace
@@ -160,7 +154,6 @@ export function CreateWorkspaceDialog({
             <p className="text-[var(--text-sm)] text-[var(--color-danger)]">{error}</p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-1">
             <button
               type="button"

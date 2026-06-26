@@ -17,7 +17,6 @@ const SHORTCUTS = [
 const ORBIT_SHORTCUT_EVENT = "orbit:shortcut";
 
 export function useKeyboardShortcuts(): void {
-  // Handle shortcut actions inside React event loop
   useEffect(() => {
     const handler = (e: Event): void => {
       const shortcut = (e as CustomEvent<string>).detail;
@@ -27,6 +26,8 @@ export function useKeyboardShortcuts(): void {
         case "CmdOrCtrl+T":
         case "new_tab":
           store.addTab();
+          // Navigate to Home so the new tab shows Home page
+          window.dispatchEvent(new CustomEvent("orbit:navigate-home"));
           break;
 
         case "CmdOrCtrl+W":
@@ -56,11 +57,6 @@ export function useKeyboardShortcuts(): void {
         case "Alt+Right":
           browserFacade.forward().catch(console.warn);
           break;
-
-        case "CmdOrCtrl+K":
-        case "command_palette":
-          // Handled in ShellLayout
-          break;
       }
     };
 
@@ -68,7 +64,6 @@ export function useKeyboardShortcuts(): void {
     return () => window.removeEventListener(ORBIT_SHORTCUT_EVENT, handler);
   }, []);
 
-  // Register global shortcuts
   useEffect(() => {
     const setup = async (): Promise<void> => {
       for (const shortcut of SHORTCUTS) {
@@ -87,13 +82,10 @@ export function useKeyboardShortcuts(): void {
         }
       }
     };
-
     setup();
-
     return () => { unregisterAll().catch(() => {}); };
   }, []);
 
-  // Escape via DOM
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === "Escape") {

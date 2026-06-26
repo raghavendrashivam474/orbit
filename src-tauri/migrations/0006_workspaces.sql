@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS workspaces (
     id             TEXT    PRIMARY KEY,
     name           TEXT    NOT NULL,
-    icon           TEXT    NOT NULL DEFAULT 'ðŸ ',
+    icon           TEXT    NOT NULL,
     icon_type      TEXT    NOT NULL DEFAULT 'emoji',
     color          TEXT    NOT NULL DEFAULT '#3B82F6',
     created_at     TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -30,13 +30,3 @@ CREATE INDEX IF NOT EXISTS idx_workspace_tabs_workspace
 
 CREATE INDEX IF NOT EXISTS idx_workspace_tabs_tab
     ON workspace_tabs(tab_id);
-
--- Insert the default Personal workspace
-INSERT OR IGNORE INTO workspaces
-    (id, name, icon, icon_type, color, position, is_default)
-VALUES
-    ('workspace-personal', 'Personal', 'ðŸ ', 'emoji', '#3B82F6', 0, 1);
-
--- Settings key for active workspace
-INSERT OR IGNORE INTO settings (key, value)
-VALUES ('active_workspace_id', '"workspace-personal"');

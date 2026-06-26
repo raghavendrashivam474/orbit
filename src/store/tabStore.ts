@@ -1,13 +1,13 @@
 /**
  * tabStore.ts
- * Orbit Tab Store â€” Sprint 5: workspace-aware
+ * Orbit Tab Store - Sprint 5: Workspace-aware
  *
- * Tabs now carry a workspaceId.
- * Workspace owns tabs logically.
- * This store is the global index for fast lookup.
+ * Every tab carries a workspaceId.
+ * New tabs auto-assign to the currently active workspace.
  */
 
 import { create } from "zustand";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 
 export interface Tab {
   id:          string;
@@ -18,10 +18,14 @@ export interface Tab {
   rendererId?: string;
 }
 
+function getActiveWorkspaceId(): string {
+  return useWorkspaceStore.getState().activeWorkspaceId ?? "workspace-personal";
+}
+
 function createTab(overrides: Partial<Tab> = {}): Tab {
   return {
     id:          crypto.randomUUID(),
-    workspaceId: "workspace-personal",
+    workspaceId: overrides.workspaceId ?? getActiveWorkspaceId(),
     title:       "New Tab",
     url:         "",
     isLoading:   false,
@@ -38,8 +42,6 @@ interface TabState {
   removeTab:    (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab:    (id: string, updates: Partial<Tab>) => void;
-
-  /** Return tabs belonging to a specific workspace. */
   getWorkspaceTabs: (workspaceId: string) => Tab[];
 }
 
@@ -59,9 +61,15 @@ export const useTabStore = create<TabState>()((set, get) => ({
 
   closeTab: (id: string): void => {
     const { tabs, activeTabId } = get();
-    if (tabs.length === 1) return;
-    const index = tabs.findIndex((t) => t.id === id);
-    const next  = tabs[index === 0 ? 1 : index - 1];
+    const activeWorkspaceId = getActiveWorkspaceId();
+
+    // Only consider tabs in current workspace for fallback selection
+    const workspaceTabs = tabs.filter((t) => t.workspaceId === activeWorkspaceId);
+    if (workspaceTabs.length <= 1) return;
+
+    const index = workspaceTabs.findIndex((t) => t.id === id);
+    const next  = workspaceTabs[index === 0 ? 1 : index - 1];
+
     set({
       tabs:        tabs.filter((t) => t.id !== id),
       activeTabId: activeTabId === id ? (next?.id ?? "") : activeTabId,

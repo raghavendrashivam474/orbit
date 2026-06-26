@@ -1,7 +1,10 @@
 /**
  * WorkspaceRepository.ts
- * Orbit â€” TypeScript Workspace Repository
+ * Orbit - TypeScript Workspace Repository
  * Thin IPC wrapper. All SQL lives in Rust.
+ *
+ * Tauri auto-converts camelCase keys to snake_case parameters.
+ * Pass camelCase from TypeScript.
  */
 
 import { invoke } from "@/core/ipc/bridge";
@@ -115,7 +118,7 @@ export const WorkspaceRepository = {
 
   loadTabs: async (workspaceId: string): Promise<WorkspaceTab[]> => {
     const raw = await invoke<RustWorkspaceTab[]>("workspace_load_tabs", {
-      workspace_id: workspaceId,
+      workspaceId,
     });
     return raw.map(mapTab);
   },

@@ -1,9 +1,6 @@
 /**
  * WorkspaceTypes.ts
- * Orbit Workspace â€” Type Definitions
- *
- * These types mirror the Rust workspace models exactly.
- * Used across the entire workspace layer.
+ * Orbit Workspace - Type Definitions
  */
 
 export interface Workspace {
@@ -55,7 +52,6 @@ export interface SaveWorkspaceTabsInput {
   }[];
 }
 
-/** Orbit workspace color palette. */
 export const WORKSPACE_COLORS = [
   { label: "Blue",   value: "#3B82F6" },
   { label: "Purple", value: "#8B5CF6" },
@@ -67,10 +63,25 @@ export const WORKSPACE_COLORS = [
   { label: "Pink",   value: "#EC4899" },
 ] as const;
 
-/** Default emoji suggestions for new workspaces. */
+// Emoji constants stored as Unicode escapes to survive PowerShell encoding
 export const WORKSPACE_EMOJIS = [
-  "ðŸ ", "ðŸ’¼", "ðŸš€", "ðŸ“š", "ðŸŽ¯", "ðŸ”¬", "ðŸŽ¨", "ðŸ› ï¸",
-  "ðŸ“", "ðŸŒ", "ðŸŽ®", "ðŸ’¡", "ðŸ”", "ðŸ“Š", "ðŸ§ ", "âš¡",
+  "\u{1F3E0}",  // house
+  "\u{1F4BC}",  // briefcase
+  "\u{1F680}",  // rocket
+  "\u{1F4DA}",  // books
+  "\u{1F3AF}",  // target
+  "\u{1F52C}",  // microscope
+  "\u{1F3A8}",  // artist palette
+  "\u{1F6E0}\u{FE0F}",  // hammer and wrench
+  "\u{1F4DD}",  // memo
+  "\u{1F30D}",  // globe
+  "\u{1F3AE}",  // video game
+  "\u{1F4A1}",  // light bulb
+  "\u{1F510}",  // closed lock with key
+  "\u{1F4CA}",  // bar chart
+  "\u{1F9E0}",  // brain
+  "\u{26A1}",   // high voltage
 ] as const;
 
-export const DEFAULT_WORKSPACE_ID = "workspace-personal";
+export const DEFAULT_WORKSPACE_EMOJI = "\u{1F3E0}";  // house
+export const DEFAULT_WORKSPACE_ID    = "workspace-personal";
