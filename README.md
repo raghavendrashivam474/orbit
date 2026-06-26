@@ -1,30 +1,35 @@
 ﻿# 🌍 Orbit
 
-> **A modern web workspace built for focus, context, and intentional browsing.**
+> **A modern workspace-oriented browser built for focus, context, and intentional browsing.**
 
-Orbit is an experimental desktop application that reimagines the traditional browser as a **workspace-oriented environment** rather than simply a collection of tabs.
+Orbit is an experimental desktop application that reimagines the traditional browser as a **workspace platform** rather than simply a collection of tabs.
 
-Rather than organizing browsing around windows and bookmarks alone, Orbit is designed to organize work around **projects, sessions, context, and workflows**, helping users stay focused and preserve the intent behind their browsing.
+Instead of organizing browsing around windows and bookmarks, Orbit organizes work around **workspaces, sessions, context, and workflows**, helping users preserve the intent behind what they do on the web.
 
 ---
 
 # 🚀 Current Status
 
-**Current Version:** **v0.4.0**
+**Current Version:** **v0.5.0**
 
 **Development Stage:** Active
 
-Orbit has completed its first four engineering sprints and now includes:
+Orbit has completed its first **five engineering sprints** and now includes:
 
 - Modern desktop shell
 - Functional browser core
-- Persistent storage layer
-- History and bookmarks
+- Native persistence layer
+- Workspace Engine
+- Per-workspace tab isolation
 - Session persistence
-- Command Palette foundation
-- Layered architecture with documented engineering decisions
+- History and bookmarks
+- Event-driven architecture
+- Layered Rust + TypeScript architecture
+- Architecture Decision Records (ADRs)
 
-The project is currently transitioning toward its next major milestone: **Workspace Engine**.
+The browser foundation is complete.
+
+Orbit is now entering its next phase: **Intelligence Foundation**.
 
 ---
 
@@ -36,8 +41,9 @@ Orbit explores a different question:
 
 > **What if a browser understood why you opened a page, not just what page you opened?**
 
-Orbit aims to become a workspace where information is organized around:
+Orbit is designed to become a workspace where users organize their digital work around:
 
+- Workspaces
 - Projects
 - Sessions
 - Research
@@ -45,7 +51,7 @@ Orbit aims to become a workspace where information is organized around:
 - Context
 - Workflows
 
-instead of simply accumulating tabs.
+rather than accumulating hundreds of disconnected tabs.
 
 ---
 
@@ -53,56 +59,61 @@ instead of simply accumulating tabs.
 
 Orbit is guided by several long-term engineering principles.
 
+## Workspaces over Windows
+
+People work in contexts—not browser windows.
+
+Orbit makes the workspace the primary organizing unit of the application.
+
+---
+
 ## Context over Tabs
 
-People work on goals—not on tabs.
+Tabs are temporary.
 
-Orbit aims to preserve context so users can return to meaningful work rather than reconstructing it from browser history.
+Context is valuable.
+
+Orbit preserves the user's working context instead of expecting them to rebuild it every day.
 
 ---
 
 ## Architecture Before Features
 
-Every major capability is built on stable architectural foundations.
+Major capabilities are built on stable architectural foundations.
 
-Long-term maintainability takes priority over short-term convenience.
+Every sprint strengthens the platform before expanding it.
 
 ---
 
 ## Separation of Concerns
 
-Each subsystem owns one responsibility.
+Each subsystem owns a single responsibility.
 
 - Shell owns presentation.
+- Workspace owns organization.
 - Browser owns navigation.
 - Renderer owns rendering.
 - Persistence owns storage.
 
-This keeps Orbit modular and adaptable as it grows.
-
 ---
 
-## Local-First by Design
+## Local-First
 
 User data belongs to the user.
 
-Orbit stores data locally whenever possible and treats cloud connectivity as an optional enhancement rather than a requirement.
+Orbit stores information locally whenever practical and treats cloud synchronization as an optional future capability.
 
 ---
 
 ## Performance First
 
-Orbit is built with lightweight native technologies.
-
-The goal is fast startup, low memory usage, and responsive interactions without sacrificing maintainability.
+Orbit is built using lightweight native technologies to deliver responsive desktop performance with efficient resource usage.
 
 ---
 
 ## Privacy by Design
 
-Orbit is designed to minimize unnecessary data collection.
-
-Future intelligence features are planned with local processing as the default whenever practical.
+Future intelligence features are planned with local execution as the default wherever practical.
 
 ---
 
@@ -127,43 +138,33 @@ Future intelligence features are planned with local processing as the default wh
 
 ## ✅ Sprint 1 — Foundation
 
-Established the engineering foundation.
-
 - Tauri v2
 - React + TypeScript
 - Rust backend
 - IPC bridge
 - Zustand
-- React Router
 - Tailwind CSS
-- ESLint
-- Prettier
-- Husky
+- Tooling
 - ADR-0001
 
 ---
 
 ## ✅ Sprint 2 — Orbit Shell
 
-Built the application shell.
-
 - Custom title bar
 - Sidebar
 - Toolbar
 - Address bar
 - Tab interface
-- Design token system
 - Theme support
-- Layout architecture
+- Layout system
 - ADR-0002
 
 ---
 
 ## ✅ Sprint 3 — Browser Core
 
-Orbit became a functional browser.
-
-- BrowserFacade architecture
+- BrowserFacade
 - Renderer abstraction
 - WebView2 renderer
 - Navigation
@@ -178,20 +179,33 @@ Orbit became a functional browser.
 
 ## ✅ Sprint 4 — Persistence Layer
 
-Orbit learned to remember.
-
-- SQLite integration
-- sqlx persistence
-- Database migrations
+- SQLite + sqlx
+- Repository architecture
+- PersistenceService
 - History
 - Bookmarks
 - Session persistence
 - Settings persistence
-- Command Palette foundation
-- PersistenceService
-- Repository architecture
+- Database migrations
 - ADR-0005
 - ADR-0006
+
+---
+
+## ✅ Sprint 5 — Workspace Engine
+
+- Workspace architecture
+- WorkspaceFacade
+- Workspace CRUD
+- Default Personal workspace
+- Workspace sidebar
+- Workspace switching
+- Per-workspace tab isolation
+- Per-tab renderer lifecycle
+- Active workspace persistence
+- Emoji & color customization
+- ADR-0007
+- ADR-0008
 
 ---
 
@@ -204,6 +218,13 @@ Orbit Shell
 ├── Tab Bar
 ├── Toolbar
 ├── Sidebar
+│
+▼
+Workspace Layer
+│
+├── WorkspaceFacade
+├── Workspace Manager
+└── Workspace State
 │
 ▼
 Browser Layer
@@ -227,65 +248,62 @@ Persistence Layer
 └── SQLite (sqlx)
 ```
 
-Every layer has a single responsibility and communicates through well-defined interfaces.
+Every layer owns one responsibility and communicates through well-defined interfaces.
 
 ---
 
 # Roadmap
 
-## 🟦 Milestone 1 — Browser Foundation _(Completed)_
+## ✅ Milestone 1 — Browser Foundation
+
+Completed.
 
 - Browser shell
 - Navigation
-- Tabs
-- Browser rendering
-- History
-- Bookmarks
-- Session persistence
-- Settings persistence
+- Browser core
+- Persistence
+- Workspace Engine
 
 ---
 
-## 🟨 Milestone 2 — Workspace Engine _(In Progress)_
+## 🟨 Milestone 2 — Intelligence Foundation
 
-- Workspaces
-- Workspace switching
-- Workspace sessions
-- Collections
-- Command Palette expansion
-- Unified search
-- Recent activity
+- Workspace-aware history
+- Workspace-aware bookmarks
+- Local AI memory
+- Semantic search
+- Content extraction
+- Intelligent command palette
 
 ---
 
 ## 🟩 Milestone 3 — Productivity Layer
 
-- Downloads
 - Notes
+- Downloads
 - Split view
-- Pinning
+- Collections
 - Smart organization
 - Advanced search
 
 ---
 
-## 🟪 Milestone 4 — Intelligence Layer
+## 🟪 Milestone 4 — Orbit + RaghavOS
 
-- Context awareness
-- Local AI
-- Semantic search
-- Intelligent suggestions
-- Workspace memory
+- Shared sessions
+- Resource integration
+- Native automation
+- Cross-application workflows
+- Workspace synchronization
 
 ---
 
-## 🟥 Milestone 5 — Orbit + RaghavOS
+## 🟥 Milestone 5 — Orbit Ecosystem
 
-- Resource integration
-- Session synchronization
-- Native automation
-- Shared workspace model
-- Cross-application workflows
+- Plugin SDK
+- Themes
+- Marketplace
+- Cross-device experiences
 
 ---
 
@@ -317,7 +335,8 @@ Orbit is developed with a strong emphasis on long-term maintainability.
 The project follows:
 
 - Strict TypeScript
-- Modular architecture
+- Layered architecture
+- Domain-driven design
 - Rust-first persistence
 - Architecture Decision Records (ADRs)
 - Event-driven communication
@@ -333,7 +352,7 @@ The project follows:
 
 Orbit is currently under active architectural development.
 
-Contribution guidelines will be published once the project reaches a stable public milestone.
+Contribution guidelines will be published once the project reaches its first public beta.
 
 ---
 
@@ -347,13 +366,14 @@ MIT License
 
 Orbit is part of a broader exploration into productivity-focused desktop software and modern application architecture.
 
-Each sprint is designed to answer a single architectural question while strengthening the overall engineering foundation:
+Each sprint answers one architectural question:
 
-- **Sprint 1:** Can Orbit exist?
-- **Sprint 2:** Can Orbit feel like Orbit?
-- **Sprint 3:** Can Orbit browse?
-- **Sprint 4:** Can Orbit remember?
+- Sprint 1 — Can Orbit exist?
+- Sprint 2 — Can Orbit feel like Orbit?
+- Sprint 3 — Can Orbit browse?
+- Sprint 4 — Can Orbit remember?
+- Sprint 5 — Can Orbit organize?
 
-The next step is equally important:
+The next chapter begins with Sprint 6:
 
-> **Sprint 5 — Can Orbit organize?**
+> **Can Orbit understand?**
