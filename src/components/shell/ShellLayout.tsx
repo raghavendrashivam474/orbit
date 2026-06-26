@@ -1,14 +1,3 @@
-/**
- * ShellLayout.tsx
- * Orbit Application Shell - Sprint 4
- *
- * Adds:
- * - Settings initialization from SQLite
- * - Persistence service startup
- * - Command palette (Ctrl+K)
- * - Session save on unmount
- */
-
 import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { TitleBar } from "./TitleBar";
@@ -42,7 +31,7 @@ export function ShellLayout(): React.JSX.Element {
 
   const location = useLocation();
   const { tabs, activeTabId } = useTabStore();
-  const { initTabState }      = useBrowserStore();
+  const { initTabState } = useBrowserStore();
   const {
     initialize:          initSettings,
     sidebarCollapsed,
@@ -57,19 +46,17 @@ export function ShellLayout(): React.JSX.Element {
     : LAYOUT.SIDEBAR_EXPANDED;
 
   const isShellPage = SHELL_ROUTES.includes(location.pathname);
+  const isBrowserPage = !isShellPage;
 
-  // Initialize settings from SQLite on first mount
   useEffect(() => {
     initSettings().catch(console.warn);
   }, [initSettings]);
 
-  // Start persistence service
   useEffect(() => {
     PersistenceService.start();
     return () => PersistenceService.stop();
   }, []);
 
-  // Register new tabs with facade
   useEffect(() => {
     tabs.forEach((tab) => {
       const state = browserFacade.getSessionState(tab.id);
@@ -80,14 +67,12 @@ export function ShellLayout(): React.JSX.Element {
     });
   }, [tabs, initTabState]);
 
-  // Activate tab on switch
   useEffect(() => {
     if (activeTabId) {
       browserFacade.activateTab(activeTabId).catch(console.warn);
     }
   }, [activeTabId]);
 
-  // Save session on page unload
   useEffect(() => {
     const handleUnload = (): void => {
       const { tabs: currentTabs, activeTabId: currentActiveTab } = useTabStore.getState();
@@ -99,12 +84,10 @@ export function ShellLayout(): React.JSX.Element {
       }));
       SessionRepository.save(currentActiveTab, tabsToSave).catch(console.warn);
     };
-
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, []);
 
-  // Open command palette via CustomEvent from shortcut bridge
   useEffect(() => {
     const handler = (e: Event): void => {
       const shortcut = (e as CustomEvent<string>).detail;
@@ -137,12 +120,24 @@ export function ShellLayout(): React.JSX.Element {
         />
 
         <main className="flex-1 overflow-hidden bg-[var(--bg)] relative">
+
+          {/* Shell pages — rendered on top, full coverage, no bleed */}
           {isShellPage && (
-            <div className="absolute inset-0 overflow-auto orbit-scrollbar z-10">
+            <div
+              className="absolute inset-0 overflow-auto orbit-scrollbar bg-[var(--bg)]"
+              style={{ zIndex: 20 }}
+            >
               <Outlet />
             </div>
           )}
-          <BrowserView sidebarWidth={sidebarWidth} />
+
+          {/* Browser view — only mounted on browser routes */}
+          {isBrowserPage && (
+            <div className="absolute inset-0" style={{ zIndex: 10 }}>
+              <BrowserView sidebarWidth={sidebarWidth} />
+            </div>
+          )}
+
         </main>
       </div>
 

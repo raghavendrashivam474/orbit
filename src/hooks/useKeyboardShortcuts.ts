@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { register, isRegistered, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
+import { useTabStore } from "@/store/tabStore";
 import { browserFacade } from "@/browser/BrowserFacade";
 
 const SHORTCUTS = [
@@ -16,10 +17,10 @@ const SHORTCUTS = [
 const ORBIT_SHORTCUT_EVENT = "orbit:shortcut";
 
 export function useKeyboardShortcuts(): void {
+  // Handle shortcut actions inside React event loop
   useEffect(() => {
     const handler = (e: Event): void => {
       const shortcut = (e as CustomEvent<string>).detail;
-      const { useTabStore } = require("@/store/tabStore");
       const store = useTabStore.getState();
 
       switch (shortcut) {
@@ -27,10 +28,12 @@ export function useKeyboardShortcuts(): void {
         case "new_tab":
           store.addTab();
           break;
+
         case "CmdOrCtrl+W":
         case "close_tab":
           store.closeTab(store.activeTabId);
           break;
+
         case "CmdOrCtrl+L":
         case "focus_address": {
           const bar = document.querySelector<HTMLInputElement>(
@@ -39,20 +42,24 @@ export function useKeyboardShortcuts(): void {
           if (bar) { bar.focus(); bar.select(); }
           break;
         }
+
         case "CmdOrCtrl+R":
         case "reload_page":
         case "F5":
           browserFacade.reload().catch(console.warn);
           break;
+
         case "Alt+Left":
           browserFacade.back().catch(console.warn);
           break;
+
         case "Alt+Right":
           browserFacade.forward().catch(console.warn);
           break;
+
         case "CmdOrCtrl+K":
         case "command_palette":
-          // Handled in ShellLayout via the same event
+          // Handled in ShellLayout
           break;
       }
     };
@@ -61,6 +68,7 @@ export function useKeyboardShortcuts(): void {
     return () => window.removeEventListener(ORBIT_SHORTCUT_EVENT, handler);
   }, []);
 
+  // Register global shortcuts
   useEffect(() => {
     const setup = async (): Promise<void> => {
       for (const shortcut of SHORTCUTS) {
@@ -79,13 +87,18 @@ export function useKeyboardShortcuts(): void {
         }
       }
     };
+
     setup();
+
     return () => { unregisterAll().catch(() => {}); };
   }, []);
 
+  // Escape via DOM
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") browserFacade.stop().catch(console.warn);
+      if (e.key === "Escape") {
+        browserFacade.stop().catch(console.warn);
+      }
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
