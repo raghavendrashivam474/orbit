@@ -1,53 +1,47 @@
 ﻿# 🌍 Orbit
 
-> **A modern workspace-oriented browser built for focus, context, and intentional browsing.**
+> **A modern workspace-oriented browser designed for focus, context, and intentional browsing.**
 
-Orbit is an experimental desktop application that reimagines the traditional browser as a **workspace platform** rather than simply a collection of tabs.
+Orbit is a desktop application that reimagines the traditional browser as a **workspace platform** rather than simply a collection of tabs.
 
-Instead of organizing browsing around windows and bookmarks, Orbit organizes work around **workspaces, sessions, context, and workflows**, helping users preserve the intent behind what they do on the web.
+Instead of organizing browsing around windows and bookmarks, Orbit organizes work around **workspaces, sessions, context, and workflows**, helping users preserve the intent behind their digital work.
 
 ---
 
 # 🚀 Current Status
 
-**Current Version:** **v0.5.1**
+**Version:** **v0.5.2**
 
-**Development Stage:** Active
+**Stage:** Active Development
 
-Orbit has completed its first five engineering sprints and a major post-sprint architectural refactor.
+Orbit has completed its browser foundation and workspace engine. The project now provides:
 
-Current capabilities include:
-
-- Modern desktop shell
-- Functional browser core
-- Native persistence layer
-- Workspace Engine
+- Modern native desktop shell
+- Workspace-oriented browsing
 - Per-workspace tab isolation
-- Per-tab WebView lifecycle
-- Session persistence
-- History and bookmarks
-- Event-driven architecture
-- Imperative native resource orchestration
-- Layered Rust + TypeScript architecture
+- Persistent sessions
+- History & bookmarks
+- SQLite persistence
+- Native Rust backend
+- Workspace switching
+- Stable WebView lifecycle
+- Refined desktop UI
+- Layered architecture
 - Architecture Decision Records (ADRs)
 
-Sprint 5 concluded with a significant architectural refactor that simplified browser lifecycle management and established the engineering principles that will guide future native integrations.
-
-Orbit is now entering its next phase:
-
-> **Sprint 6 — Intelligence Foundation**
+The next development phase focuses on building Orbit's **Intelligence Foundation**.
 
 ---
 
 # Vision
 
-Modern browsers are excellent at rendering web pages.
+Modern browsers excel at rendering web pages.
 
 Orbit explores a different question:
 
 > **What if a browser understood why you opened a page, not just what page you opened?**
 
-Orbit aims to organize digital work around:
+Orbit aims to become a workspace where users organize their digital life around:
 
 - Workspaces
 - Projects
@@ -57,83 +51,87 @@ Orbit aims to organize digital work around:
 - Context
 - Workflows
 
-instead of accumulating disconnected tabs.
+instead of accumulating hundreds of disconnected tabs.
 
 ---
 
-# Engineering Philosophy
+# Core Philosophy
 
-Orbit is guided by several long-term engineering principles.
+## 🏠 Workspaces over Windows
 
-## Workspaces over Windows
+People don't work in browser windows.
 
-Work is organized around contexts, not browser windows.
+They work in contexts.
+
+Orbit makes workspaces the primary organizational unit.
 
 ---
 
-## Context over Tabs
+## 🧠 Context over Tabs
 
 Tabs are temporary.
 
-Context is durable.
+Context is valuable.
 
-Orbit preserves the user's working context rather than expecting them to rebuild it every day.
-
----
-
-## Architecture Before Features
-
-Major capabilities are built on stable architectural foundations.
-
-Each sprint strengthens the platform before expanding functionality.
+Orbit preserves context so users can resume meaningful work without rebuilding it.
 
 ---
 
-## Separation of Responsibilities
+## 🏗 Architecture Before Features
 
-Each subsystem owns exactly one responsibility.
+Every major feature is built on a stable architectural foundation.
+
+The platform evolves incrementally through carefully planned engineering milestones.
+
+---
+
+## 🎯 Single Responsibility
+
+Every subsystem owns exactly one responsibility.
 
 - Shell owns presentation.
 - Workspace owns organization.
 - Browser owns navigation.
-- WebviewSync owns native WebView lifecycle.
+- WebviewSync owns native renderer lifecycle.
 - Persistence owns storage.
 
 ---
 
-## Imperative Ownership of Native Resources
+## ⚡ Imperative Native Resource Management
 
 Native resources such as WebViews are managed explicitly.
 
-Orbit avoids reactive orchestration for native operations and instead performs deterministic synchronization through dedicated lifecycle managers.
+Orbit favors deterministic synchronization over reactive orchestration for native platform resources.
 
 ---
 
-## One Source of Truth
+## 📍 One Source of Truth
 
 Every domain has one authoritative owner.
 
-Derived layers synchronize from that owner rather than maintaining parallel state.
+Derived state synchronizes from that source rather than maintaining duplicated state.
 
 ---
 
-## Local-First
+## 💾 Local-First
 
-User data remains local whenever practical.
+User data belongs to the user.
+
+Orbit stores information locally whenever practical.
 
 Cloud synchronization is considered an optional future capability.
 
 ---
 
-## Performance First
+## 🚀 Performance First
 
-Orbit is designed to remain lightweight, responsive and maintainable through careful architectural decisions rather than aggressive optimization.
+Orbit is designed using lightweight native technologies with an emphasis on responsiveness, maintainability, and efficient resource usage.
 
 ---
 
-## Privacy by Design
+## 🔒 Privacy by Design
 
-Future intelligence capabilities are planned with local execution as the preferred model.
+Future intelligence capabilities are planned with local execution as the preferred model wherever practical.
 
 ---
 
@@ -146,15 +144,15 @@ Future intelligence capabilities are planned with local execution as the preferr
 | Database          | SQLite + sqlx |
 | Frontend          | React 19      |
 | Language          | TypeScript    |
-| Build Tool        | Vite          |
 | Styling           | Tailwind CSS  |
+| Build Tool        | Vite          |
 | State Management  | Zustand       |
 | Routing           | React Router  |
 | Package Manager   | pnpm          |
 
 ---
 
-# Development Progress
+# Development Timeline
 
 ## ✅ Sprint 1 — Foundation
 
@@ -164,7 +162,7 @@ Future intelligence capabilities are planned with local execution as the preferr
 - IPC bridge
 - Zustand
 - Tailwind CSS
-- Tooling
+- Development tooling
 - ADR-0001
 
 ---
@@ -177,19 +175,18 @@ Future intelligence capabilities are planned with local execution as the preferr
 - Address bar
 - Tab interface
 - Theme support
-- Layout system
+- Layout architecture
 - ADR-0002
 
 ---
 
 ## ✅ Sprint 3 — Browser Core
 
-- Browser architecture
 - Renderer abstraction
+- Browser architecture
 - Navigation
-- Tabs
 - Keyboard shortcuts
-- Browser event system
+- Browser events
 - Layout manager
 - ADR-0003
 - ADR-0004
@@ -199,12 +196,11 @@ Future intelligence capabilities are planned with local execution as the preferr
 ## ✅ Sprint 4 — Persistence Layer
 
 - SQLite + sqlx
-- Repository architecture
 - PersistenceService
+- Repository architecture
 - History
 - Bookmarks
 - Session persistence
-- Settings persistence
 - Database migrations
 - ADR-0005
 - ADR-0006
@@ -215,10 +211,9 @@ Future intelligence capabilities are planned with local execution as the preferr
 
 - Workspace architecture
 - Workspace CRUD
-- Workspace sidebar
 - Workspace switching
-- Per-workspace tab isolation
-- Per-tab WebView lifecycle
+- Workspace sidebar
+- Per-workspace tabs
 - Active workspace persistence
 - Emoji & color customization
 - ADR-0007
@@ -226,16 +221,26 @@ Future intelligence capabilities are planned with local execution as the preferr
 
 ---
 
-## ✅ Sprint 5.1 — Architectural Refactor
+## ✅ Sprint 5.1 — Architecture Refactor
 
-- WebviewSync lifecycle manager
-- Imperative WebView orchestration
-- Removal of reactive render loops
-- Stable workspace switching
-- Stable tab restoration
-- Deterministic native synchronization
-- Performance improvements
-- Architectural principles for future native integrations
+- Stable WebView lifecycle
+- WebviewSync manager
+- Imperative orchestration
+- Deterministic synchronization
+- Stable renderer ownership
+- Simplified browser lifecycle
+
+---
+
+## ✅ Sprint 5.2 — UI & UX Polish
+
+- Refined expanded sidebar
+- Refined collapsed sidebar
+- Improved spacing
+- Better navigation hierarchy
+- Workspace visual improvements
+- Enhanced transitions
+- Improved desktop experience
 
 ---
 
@@ -259,6 +264,7 @@ Workspace Layer
 ▼
 Browser Layer
 │
+├── Browser Services
 ├── Navigation
 ├── WebviewSync
 └── Native WebViews
@@ -272,23 +278,21 @@ Persistence Layer
 └── SQLite (sqlx)
 ```
 
-Every layer owns one responsibility.
-
-Native resources are synchronized explicitly rather than reactively.
+Every layer owns one responsibility and communicates through well-defined interfaces.
 
 ---
 
 # Roadmap
 
-## ✅ Milestone 1 — Browser Foundation
-
-Completed.
+## ✅ Milestone 1 — Browser Foundation _(Completed)_
 
 - Browser shell
+- Browser core
 - Navigation
 - Persistence
 - Workspace Engine
-- Stable WebView lifecycle
+- Stable renderer lifecycle
+- Desktop UI polish
 
 ---
 
@@ -296,10 +300,10 @@ Completed.
 
 - Workspace-aware history
 - Workspace-aware bookmarks
-- Local AI memory
 - Semantic search
 - Intelligent command palette
 - Content understanding
+- Local AI memory
 
 ---
 
@@ -319,8 +323,8 @@ Completed.
 - Shared sessions
 - Resource integration
 - Native automation
-- Cross-application workflows
 - Workspace synchronization
+- Cross-application workflows
 
 ---
 
@@ -356,7 +360,7 @@ Completed.
 - Platform abstraction layer
 - Unified renderer architecture
 - Cross-platform shortcuts
-- Native platform integration
+- Native integrations
 - Cross-platform CI/CD
 
 ---
@@ -371,33 +375,36 @@ src-tauri/
     Rust backend
 
 docs/
-    Architecture
     ADRs
+    Architecture
     Sprint Reports
     Engineering Notes
 
 assets/
     Application assets
+
+public/
+    Static resources
 ```
 
 ---
 
 # Engineering Standards
 
-Orbit follows:
+Orbit follows a disciplined engineering process built around long-term maintainability.
 
 - Strict TypeScript
 - Layered architecture
 - Domain-driven design
 - Rust-first persistence
-- Architecture Decision Records
+- Architecture Decision Records (ADRs)
 - Event-driven communication
 - Imperative native resource management
 - Structured logging
 - Database migrations
-- Automated linting
+- Automated linting & formatting
 - Git hooks
-- Incremental sprint-based development
+- Sprint-based incremental development
 
 ---
 
@@ -419,18 +426,16 @@ MIT License
 
 Orbit is part of a broader exploration into productivity-focused desktop software and modern application architecture.
 
-Every sprint answers a single architectural question:
+Every sprint answers one architectural question:
 
-- Sprint 1 — Can Orbit exist?
-- Sprint 2 — Can Orbit feel like Orbit?
-- Sprint 3 — Can Orbit browse?
-- Sprint 4 — Can Orbit remember?
-- Sprint 5 — Can Orbit organize?
+- **Sprint 1** — Can Orbit exist?
+- **Sprint 2** — Can Orbit feel like Orbit?
+- **Sprint 3** — Can Orbit browse?
+- **Sprint 4** — Can Orbit remember?
+- **Sprint 5** — Can Orbit organize?
+- **Sprint 5.1** — Can Orbit remain stable under real-world usage?
+- **Sprint 5.2** — Can Orbit feel polished?
 
-Sprint 5.1 answered a different question:
-
-> **Can Orbit remain stable under real-world usage?**
-
-The next chapter begins with Sprint 6:
+The next chapter begins with **Sprint 6**:
 
 > **Can Orbit understand?**
