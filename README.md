@@ -10,26 +10,32 @@ Instead of organizing browsing around windows and bookmarks, Orbit organizes wor
 
 # 🚀 Current Status
 
-**Current Version:** **v0.5.0**
+**Current Version:** **v0.5.1**
 
 **Development Stage:** Active
 
-Orbit has completed its first **five engineering sprints** and now includes:
+Orbit has completed its first five engineering sprints and a major post-sprint architectural refactor.
+
+Current capabilities include:
 
 - Modern desktop shell
 - Functional browser core
 - Native persistence layer
 - Workspace Engine
 - Per-workspace tab isolation
+- Per-tab WebView lifecycle
 - Session persistence
 - History and bookmarks
 - Event-driven architecture
+- Imperative native resource orchestration
 - Layered Rust + TypeScript architecture
 - Architecture Decision Records (ADRs)
 
-The browser foundation is complete.
+Sprint 5 concluded with a significant architectural refactor that simplified browser lifecycle management and established the engineering principles that will guide future native integrations.
 
-Orbit is now entering its next phase: **Intelligence Foundation**.
+Orbit is now entering its next phase:
+
+> **Sprint 6 — Intelligence Foundation**
 
 ---
 
@@ -41,7 +47,7 @@ Orbit explores a different question:
 
 > **What if a browser understood why you opened a page, not just what page you opened?**
 
-Orbit is designed to become a workspace where users organize their digital work around:
+Orbit aims to organize digital work around:
 
 - Workspaces
 - Projects
@@ -51,7 +57,7 @@ Orbit is designed to become a workspace where users organize their digital work 
 - Context
 - Workflows
 
-rather than accumulating hundreds of disconnected tabs.
+instead of accumulating disconnected tabs.
 
 ---
 
@@ -61,9 +67,7 @@ Orbit is guided by several long-term engineering principles.
 
 ## Workspaces over Windows
 
-People work in contexts—not browser windows.
-
-Orbit makes the workspace the primary organizing unit of the application.
+Work is organized around contexts, not browser windows.
 
 ---
 
@@ -71,9 +75,9 @@ Orbit makes the workspace the primary organizing unit of the application.
 
 Tabs are temporary.
 
-Context is valuable.
+Context is durable.
 
-Orbit preserves the user's working context instead of expecting them to rebuild it every day.
+Orbit preserves the user's working context rather than expecting them to rebuild it every day.
 
 ---
 
@@ -81,39 +85,55 @@ Orbit preserves the user's working context instead of expecting them to rebuild 
 
 Major capabilities are built on stable architectural foundations.
 
-Every sprint strengthens the platform before expanding it.
+Each sprint strengthens the platform before expanding functionality.
 
 ---
 
-## Separation of Concerns
+## Separation of Responsibilities
 
-Each subsystem owns a single responsibility.
+Each subsystem owns exactly one responsibility.
 
 - Shell owns presentation.
 - Workspace owns organization.
 - Browser owns navigation.
-- Renderer owns rendering.
+- WebviewSync owns native WebView lifecycle.
 - Persistence owns storage.
+
+---
+
+## Imperative Ownership of Native Resources
+
+Native resources such as WebViews are managed explicitly.
+
+Orbit avoids reactive orchestration for native operations and instead performs deterministic synchronization through dedicated lifecycle managers.
+
+---
+
+## One Source of Truth
+
+Every domain has one authoritative owner.
+
+Derived layers synchronize from that owner rather than maintaining parallel state.
 
 ---
 
 ## Local-First
 
-User data belongs to the user.
+User data remains local whenever practical.
 
-Orbit stores information locally whenever practical and treats cloud synchronization as an optional future capability.
+Cloud synchronization is considered an optional future capability.
 
 ---
 
 ## Performance First
 
-Orbit is built using lightweight native technologies to deliver responsive desktop performance with efficient resource usage.
+Orbit is designed to remain lightweight, responsive and maintainable through careful architectural decisions rather than aggressive optimization.
 
 ---
 
 ## Privacy by Design
 
-Future intelligence features are planned with local execution as the default wherever practical.
+Future intelligence capabilities are planned with local execution as the preferred model.
 
 ---
 
@@ -164,9 +184,8 @@ Future intelligence features are planned with local execution as the default whe
 
 ## ✅ Sprint 3 — Browser Core
 
-- BrowserFacade
+- Browser architecture
 - Renderer abstraction
-- WebView2 renderer
 - Navigation
 - Tabs
 - Keyboard shortcuts
@@ -195,17 +214,28 @@ Future intelligence features are planned with local execution as the default whe
 ## ✅ Sprint 5 — Workspace Engine
 
 - Workspace architecture
-- WorkspaceFacade
 - Workspace CRUD
-- Default Personal workspace
 - Workspace sidebar
 - Workspace switching
 - Per-workspace tab isolation
-- Per-tab renderer lifecycle
+- Per-tab WebView lifecycle
 - Active workspace persistence
 - Emoji & color customization
 - ADR-0007
 - ADR-0008
+
+---
+
+## ✅ Sprint 5.1 — Architectural Refactor
+
+- WebviewSync lifecycle manager
+- Imperative WebView orchestration
+- Removal of reactive render loops
+- Stable workspace switching
+- Stable tab restoration
+- Deterministic native synchronization
+- Performance improvements
+- Architectural principles for future native integrations
 
 ---
 
@@ -229,15 +259,9 @@ Workspace Layer
 ▼
 Browser Layer
 │
-├── BrowserFacade
-├── Renderer Interface
-└── WebView2 Renderer
-│
-▼
-Layout System
-│
-├── Layout Manager
-└── Content Bounds
+├── Navigation
+├── WebviewSync
+└── Native WebViews
 │
 ▼
 Persistence Layer
@@ -248,7 +272,9 @@ Persistence Layer
 └── SQLite (sqlx)
 ```
 
-Every layer owns one responsibility and communicates through well-defined interfaces.
+Every layer owns one responsibility.
+
+Native resources are synchronized explicitly rather than reactively.
 
 ---
 
@@ -260,9 +286,9 @@ Completed.
 
 - Browser shell
 - Navigation
-- Browser core
 - Persistence
 - Workspace Engine
+- Stable WebView lifecycle
 
 ---
 
@@ -272,8 +298,8 @@ Completed.
 - Workspace-aware bookmarks
 - Local AI memory
 - Semantic search
-- Content extraction
 - Intelligent command palette
+- Content understanding
 
 ---
 
@@ -281,7 +307,7 @@ Completed.
 
 - Notes
 - Downloads
-- Split view
+- Split View
 - Collections
 - Smart organization
 - Advanced search
@@ -304,6 +330,34 @@ Completed.
 - Themes
 - Marketplace
 - Cross-device experiences
+
+---
+
+## 🌍 Milestone 6 — Cross-Platform Expansion _(Long-Term)_
+
+### macOS
+
+- Native `.app`
+- WKWebView renderer
+- Native menu bar
+- Apple Silicon optimization
+- Code signing & notarization
+
+### Linux
+
+- WebKitGTK renderer
+- AppImage
+- Flatpak
+- Snap
+- Wayland & X11 compatibility
+
+### Shared Goals
+
+- Platform abstraction layer
+- Unified renderer architecture
+- Cross-platform shortcuts
+- Native platform integration
+- Cross-platform CI/CD
 
 ---
 
@@ -330,19 +384,18 @@ assets/
 
 # Engineering Standards
 
-Orbit is developed with a strong emphasis on long-term maintainability.
-
-The project follows:
+Orbit follows:
 
 - Strict TypeScript
 - Layered architecture
 - Domain-driven design
 - Rust-first persistence
-- Architecture Decision Records (ADRs)
+- Architecture Decision Records
 - Event-driven communication
+- Imperative native resource management
 - Structured logging
 - Database migrations
-- Automated linting and formatting
+- Automated linting
 - Git hooks
 - Incremental sprint-based development
 
@@ -352,7 +405,7 @@ The project follows:
 
 Orbit is currently under active architectural development.
 
-Contribution guidelines will be published once the project reaches its first public beta.
+Contribution guidelines will be published before the first public beta.
 
 ---
 
@@ -366,13 +419,17 @@ MIT License
 
 Orbit is part of a broader exploration into productivity-focused desktop software and modern application architecture.
 
-Each sprint answers one architectural question:
+Every sprint answers a single architectural question:
 
 - Sprint 1 — Can Orbit exist?
 - Sprint 2 — Can Orbit feel like Orbit?
 - Sprint 3 — Can Orbit browse?
 - Sprint 4 — Can Orbit remember?
 - Sprint 5 — Can Orbit organize?
+
+Sprint 5.1 answered a different question:
+
+> **Can Orbit remain stable under real-world usage?**
 
 The next chapter begins with Sprint 6:
 
