@@ -1,26 +1,30 @@
 /**
  * tabStore.ts
- * Orbit Tab Store
+ * Orbit Tab Store â€” Sprint 5: workspace-aware
  *
- * Sprint 3: Tab store integrated with browser facade.
- * Tabs now trigger browser facade registration on creation.
+ * Tabs now carry a workspaceId.
+ * Workspace owns tabs logically.
+ * This store is the global index for fast lookup.
  */
 
 import { create } from "zustand";
 
 export interface Tab {
-  id:        string;
-  title:     string;
-  url:       string;
-  isLoading: boolean;
+  id:          string;
+  workspaceId: string;
+  title:       string;
+  url:         string;
+  isLoading:   boolean;
+  rendererId?: string;
 }
 
 function createTab(overrides: Partial<Tab> = {}): Tab {
   return {
-    id:        crypto.randomUUID(),
-    title:     "New Tab",
-    url:       "",
-    isLoading: false,
+    id:          crypto.randomUUID(),
+    workspaceId: "workspace-personal",
+    title:       "New Tab",
+    url:         "",
+    isLoading:   false,
     ...overrides,
   };
 }
@@ -28,10 +32,15 @@ function createTab(overrides: Partial<Tab> = {}): Tab {
 interface TabState {
   tabs:         Tab[];
   activeTabId:  string;
+
   addTab:       (overrides?: Partial<Tab>) => void;
   closeTab:     (id: string) => void;
+  removeTab:    (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab:    (id: string, updates: Partial<Tab>) => void;
+
+  /** Return tabs belonging to a specific workspace. */
+  getWorkspaceTabs: (workspaceId: string) => Tab[];
 }
 
 const initialTab = createTab({ title: "Home", url: "" });
@@ -59,6 +68,12 @@ export const useTabStore = create<TabState>()((set, get) => ({
     });
   },
 
+  removeTab: (id: string): void => {
+    set((state) => ({
+      tabs: state.tabs.filter((t) => t.id !== id),
+    }));
+  },
+
   setActiveTab: (id: string): void => {
     set({ activeTabId: id });
   },
@@ -67,5 +82,9 @@ export const useTabStore = create<TabState>()((set, get) => ({
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }));
+  },
+
+  getWorkspaceTabs: (workspaceId: string): Tab[] => {
+    return get().tabs.filter((t) => t.workspaceId === workspaceId);
   },
 }));

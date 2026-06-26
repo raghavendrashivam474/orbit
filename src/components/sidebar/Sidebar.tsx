@@ -1,14 +1,22 @@
 /**
  * Sidebar.tsx
- * Orbit Sidebar - Controlled Component
+ * Orbit Sidebar â€” Sprint 5: Workspace section added.
  *
- * Sprint 3: Sidebar collapse state is lifted to ShellLayout
- * so it can be used to compute content bounds.
+ * Layout:
+ *   Workspaces (new section)
+ *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ *   Home
+ *   History
+ *   Bookmarks
+ *   Downloads
+ *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ *   Settings
+ *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ *   Collapse toggle
  */
 
 import {
   Home,
-  Layers,
   Clock,
   Bookmark,
   Download,
@@ -16,16 +24,16 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { WorkspaceSection } from "@/components/workspace/WorkspaceSection";
 import { SidebarItem } from "./SidebarItem";
 import { Divider } from "@/components/common/Divider";
 import { Tooltip } from "@/components/common/Tooltip";
 
 const NAV_ITEMS = [
-  { icon: <Home size={16} strokeWidth={2} />,     label: "Home",       path: "/" },
-  { icon: <Layers size={16} strokeWidth={2} />,   label: "Workspaces", path: "/workspaces" },
-  { icon: <Clock size={16} strokeWidth={2} />,    label: "History",    path: "/history" },
-  { icon: <Bookmark size={16} strokeWidth={2} />, label: "Bookmarks",  path: "/bookmarks" },
-  { icon: <Download size={16} strokeWidth={2} />, label: "Downloads",  path: "/downloads" },
+  { icon: <Home size={16} strokeWidth={2} />,     label: "Home",      path: "/" },
+  { icon: <Clock size={16} strokeWidth={2} />,    label: "History",   path: "/history" },
+  { icon: <Bookmark size={16} strokeWidth={2} />, label: "Bookmarks", path: "/bookmarks" },
+  { icon: <Download size={16} strokeWidth={2} />, label: "Downloads", path: "/downloads" },
 ] as const;
 
 interface SidebarProps {
@@ -47,20 +55,29 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps): React.J
       ].join(" ")}
       aria-label="Primary navigation"
     >
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto orbit-scrollbar">
-        {NAV_ITEMS.map((item) => (
-          <SidebarItem
-            key={item.path}
-            icon={item.icon}
-            label={item.label}
-            path={item.path}
-            collapsed={collapsed}
-          />
-        ))}
-      </nav>
+      <div className="flex-1 overflow-y-auto orbit-scrollbar pt-2">
+        {/* Workspace section */}
+        <WorkspaceSection collapsed={collapsed} />
+
+        <Divider className="mx-2 my-2" />
+
+        {/* Primary navigation */}
+        <nav className="px-2 space-y-0.5">
+          {NAV_ITEMS.map((item) => (
+            <SidebarItem
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              path={item.path}
+              collapsed={collapsed}
+            />
+          ))}
+        </nav>
+      </div>
 
       <Divider />
 
+      {/* Settings */}
       <div className="p-2">
         <SidebarItem
           icon={<Settings size={16} strokeWidth={2} />}
@@ -72,6 +89,7 @@ export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps): React.J
 
       <Divider />
 
+      {/* Collapse toggle */}
       <div className="p-2">
         <Tooltip
           content={collapsed ? "Expand sidebar" : "Collapse sidebar"}

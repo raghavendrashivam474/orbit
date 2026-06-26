@@ -1,12 +1,13 @@
 //! lib.rs
 //! Orbit Tauri Application Library
-//! Sprint 4: Persistence layer integrated.
+//! Sprint 5: Workspace Engine integrated.
 
 mod browser;
 mod database;
 mod models;
 mod repositories;
 mod services;
+mod workspace;
 
 use browser::{
     browser_back, browser_can_go_back, browser_can_go_forward,
@@ -20,15 +21,24 @@ use models::{bookmark::BookmarkEntry, history::HistoryEntry, session::FullSessio
 use once_cell::sync::OnceCell;
 use services::persistence::PersistenceService;
 use repositories::session::TabToSave;
+use workspace::{
+    models::*,
+    service::WorkspaceService,
+};
 use tauri::{
     menu::{Menu, MenuItem},
     Emitter, Manager,
 };
 
 static PERSISTENCE: OnceCell<PersistenceService> = OnceCell::new();
+static WORKSPACE:   OnceCell<WorkspaceService>   = OnceCell::new();
 
 fn persistence() -> &'static PersistenceService {
     PERSISTENCE.get().expect("[Orbit] PersistenceService not initialized")
+}
+
+fn workspace_svc() -> &'static WorkspaceService {
+    WORKSPACE.get().expect("[Orbit] WorkspaceService not initialized")
 }
 
 // â”€â”€ Window Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -155,6 +165,48 @@ async fn settings_all() -> Result<Vec<(String, String)>, String> {
     persistence().get_all_settings().await
 }
 
+// â”€â”€ Workspace Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+#[tauri::command]
+async fn workspace_list() -> Result<Vec<WorkspaceEntry>, String> {
+    workspace_svc().list().await
+}
+
+#[tauri::command]
+async fn workspace_find(id: String) -> Result<Option<WorkspaceEntry>, String> {
+    workspace_svc().find(&id).await
+}
+
+#[tauri::command]
+async fn workspace_create(input: CreateWorkspaceInput) -> Result<WorkspaceEntry, String> {
+    workspace_svc().create(input).await
+}
+
+#[tauri::command]
+async fn workspace_update(input: UpdateWorkspaceInput) -> Result<WorkspaceEntry, String> {
+    workspace_svc().update(input).await
+}
+
+#[tauri::command]
+async fn workspace_delete(id: String) -> Result<(), String> {
+    workspace_svc().delete(&id).await
+}
+
+#[tauri::command]
+async fn workspace_activate(id: String) -> Result<(), String> {
+    workspace_svc().activate(&id).await
+}
+
+#[tauri::command]
+async fn workspace_save_tabs(input: SaveWorkspaceTabsInput) -> Result<(), String> {
+    workspace_svc().save_tabs(input).await
+}
+
+#[tauri::command]
+async fn workspace_load_tabs(workspace_id: String) -> Result<Vec<WorkspaceTabEntry>, String> {
+    workspace_svc().load_tabs(&workspace_id).await
+}
+
 // â”€â”€ Application Entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -169,7 +221,6 @@ pub fn run() {
             maximize_window,
             close_window,
             is_window_maximized,
-            // Browser
             browser_create,
             browser_navigate,
             browser_reload,
@@ -184,13 +235,11 @@ pub fn run() {
             browser_show,
             browser_hide,
             browser_destroy,
-            // History
             history_record,
             history_recent,
             history_search,
             history_delete,
             history_clear,
-            // Bookmarks
             bookmark_add,
             bookmark_all,
             bookmark_search,
@@ -198,19 +247,24 @@ pub fn run() {
             bookmark_update_title,
             bookmark_delete,
             bookmark_delete_by_url,
-            // Sessions
             session_save,
             session_load,
-            // Settings
             settings_get,
             settings_set,
             settings_all,
+            workspace_list,
+            workspace_find,
+            workspace_create,
+            workspace_update,
+            workspace_delete,
+            workspace_activate,
+            workspace_save_tabs,
+            workspace_load_tabs,
         ])
         .setup(|app| {
             let version = app.package_info().version.to_string();
             println!("[Orbit] Starting version {version}");
 
-            // Initialize database
             let app_data_dir = app
                 .path()
                 .app_data_dir()
@@ -225,12 +279,20 @@ pub fn run() {
                     .expect("[Orbit] Failed to initialize database");
 
                 PERSISTENCE
-                    .set(PersistenceService::new(pool))
+                    .set(PersistenceService::new(pool.clone()))
                     .expect("[Orbit] Failed to set PersistenceService");
 
-                println!("[Orbit] Persistence layer ready.");
+                let ws_service = WorkspaceService::new(pool);
+                ws_service.ensure_default().await
+                    .expect("[Orbit] Failed to ensure default workspace");
 
-                // Load settings and emit to frontend
+                WORKSPACE
+                    .set(ws_service)
+                    .expect("[Orbit] Failed to set WorkspaceService");
+
+                println!("[Orbit] Persistence layer ready.");
+                println!("[Orbit] Workspace engine ready.");
+
                 if let Ok(settings) = PERSISTENCE.get().unwrap().get_all_settings().await {
                     if let Some(window) = handle.get_webview_window("main") {
                         let _ = window.emit("orbit-settings-loaded", settings);
@@ -238,7 +300,6 @@ pub fn run() {
                 }
             });
 
-            // Register keyboard shortcuts
             let new_tab = MenuItem::with_id(
                 app, "new_tab", "New Tab", true, Some("CmdOrCtrl+T"),
             ).map_err(|e| e.to_string())?;

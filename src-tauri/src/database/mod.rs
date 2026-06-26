@@ -1,20 +1,12 @@
 //! database/mod.rs
 //! Orbit Database Connection Manager
-//!
-//! Owns the SQLite connection pool.
-//! Runs migrations on startup.
-//! All repositories receive a pool reference.
 
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::path::PathBuf;
 
 pub type DbPool = SqlitePool;
 
-/// Initialize the database.
-/// Creates the database file if it does not exist.
-/// Runs all pending migrations.
 pub async fn initialize(db_path: PathBuf) -> Result<DbPool, String> {
-    // Ensure parent directory exists
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create db directory: {e}"))?;
@@ -31,7 +23,6 @@ pub async fn initialize(db_path: PathBuf) -> Result<DbPool, String> {
         .await
         .map_err(|e| format!("Failed to connect to database: {e}"))?;
 
-    // Run migrations
     run_migrations(&pool).await?;
 
     println!("[Orbit] Database initialized at {}", db_path.display());
@@ -39,9 +30,7 @@ pub async fn initialize(db_path: PathBuf) -> Result<DbPool, String> {
     Ok(pool)
 }
 
-/// Run SQL migration files in order.
 async fn run_migrations(pool: &DbPool) -> Result<(), String> {
-    // Create migrations table if not exists
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS _migrations (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,6 +49,7 @@ async fn run_migrations(pool: &DbPool) -> Result<(), String> {
         (include_str!("../../migrations/0003_bookmarks.sql"), 3, "bookmarks"),
         (include_str!("../../migrations/0004_sessions.sql"),  4, "sessions"),
         (include_str!("../../migrations/0005_settings.sql"),  5, "settings"),
+        (include_str!("../../migrations/0006_workspaces.sql"),6, "workspaces"),
     ];
 
     for (sql, version, name) in migrations {
@@ -71,11 +61,8 @@ async fn run_migrations(pool: &DbPool) -> Result<(), String> {
         .await
         .map_err(|e| format!("Migration check failed: {e}"))?;
 
-        if already_applied {
-            continue;
-        }
+        if already_applied { continue; }
 
-        // Execute migration SQL
         for statement in sql.split(';') {
             let stmt = statement.trim();
             if stmt.is_empty() { continue; }

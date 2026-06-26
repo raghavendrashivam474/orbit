@@ -1,6 +1,6 @@
 [package]
 name         = "orbit"
-version      = "0.4.0"
+version      = "0.5.0"
 description  = "Orbit - Next-generation web workspace"
 authors      = ["Orbit Contributors"]
 edition      = "2021"
