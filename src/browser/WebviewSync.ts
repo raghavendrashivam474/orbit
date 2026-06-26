@@ -4,11 +4,9 @@
  * The ONLY place that manages webview lifecycle.
  * Pure imperative function. Called explicitly after user actions.
  *
- * Rules:
- *   1. Every tab with a URL must have a webview
- *   2. Only the active tab's webview is visible
- *   3. Closing a tab destroys its webview
- *   4. Switching workspaces only changes visibility, never destroys
+ * Sprint 5.3: Adds observer notification on successful navigation.
+ * WebviewSync only reports that navigation occurred. It does not
+ * know or care who is listening (PersistenceService, future AI memory, etc).
  */
 
 import { invoke } from "@/core/ipc/bridge";
@@ -17,14 +15,46 @@ import { useWorkspaceStore } from "@/store/workspaceStore";
 import { LayoutManager } from "@/layout/LayoutManager";
 import { useSettingsStore } from "@/store/settingsStore";
 import { LAYOUT } from "@/layout/LayoutConstants";
+import {
+  type NavigationObserver,
+  type NavigationEvent,
+  deriveTitleFromUrl,
+} from "./NavigationObserver";
 
 // Track which tabs have webviews in Rust
 const liveWebviews = new Set<string>();
 
+// Registered observers
+const observers = new Set<NavigationObserver>();
+
 let currentBounds = { x: 220, y: 128, width: 1060, height: 672 };
 let suppressed = false;
 
+function notifyObservers(event: NavigationEvent): void {
+  observers.forEach((observer) => {
+    try {
+      observer.onNavigate(event);
+    } catch (err) {
+      console.warn("[WebviewSync] observer threw", err);
+    }
+  });
+}
+
 export const WebviewSync = {
+  /**
+   * Subscribe to navigation events.
+   * Returns an unsubscribe function.
+   *
+   * Usage:
+   *   const unsub = WebviewSync.subscribe(persistenceObserver);
+   *   // later:
+   *   unsub();
+   */
+  subscribe(observer: NavigationObserver): () => void {
+    observers.add(observer);
+    return () => { observers.delete(observer); };
+  },
+
   /** Update bounds used for new webviews and resizing the active one */
   setBounds(bounds: { x: number; y: number; width: number; height: number }): void {
     currentBounds = bounds;
@@ -66,14 +96,12 @@ export const WebviewSync = {
 
     const activeTab = tabs.find((t) => t.id === activeTabId);
 
-    // Hide every webview except the active one
     for (const tabId of liveWebviews) {
       if (tabId !== activeTabId) {
         await invoke("browser_hide", { id: tabId }).catch(() => {});
       }
     }
 
-    // Show the active tab's webview if it should be visible
     if (
       activeTab &&
       activeTab.workspaceId === activeWorkspaceId &&
@@ -89,7 +117,6 @@ export const WebviewSync = {
           height: currentBounds.height,
         }).catch(() => {});
       } else {
-        // No webview yet - create it
         await this.createWebview(activeTab);
       }
     }
@@ -120,57 +147,74 @@ export const WebviewSync = {
     const activeTab = useTabStore.getState().getActiveTab();
     if (!activeTab) return;
 
+    const derivedTitle = deriveTitleFromUrl(url);
+
     useTabStore.getState().updateTab(activeTab.id, {
       url,
       isLoading: true,
-      title:     "Loading...",
+      title:     derivedTitle,
     });
 
+    let success = false;
+
     if (liveWebviews.has(activeTab.id)) {
-      await invoke("browser_navigate", { id: activeTab.id, url }).catch(() => {});
+      try {
+        await invoke("browser_navigate", { id: activeTab.id, url });
+        success = true;
+      } catch (e) {
+        console.warn("[WebviewSync] navigate failed", e);
+      }
     } else {
+      const before = liveWebviews.has(activeTab.id);
       await this.createWebview({ ...activeTab, url });
+      success = liveWebviews.has(activeTab.id) && !before;
     }
 
     await this.sync();
+
+    // Notify observers AFTER the navigation has actually been issued.
+    // Producers only report success.
+    if (success) {
+      notifyObservers({
+        tabId:       activeTab.id,
+        workspaceId: activeTab.workspaceId,
+        url,
+        title:       derivedTitle,
+        at:          new Date().toISOString(),
+      });
+    }
   },
 
-  /** Destroy a tab's webview (called on tab close) */
   async destroyWebview(tabId: string): Promise<void> {
     if (!liveWebviews.has(tabId)) return;
     await invoke("browser_destroy", { id: tabId }).catch(() => {});
     liveWebviews.delete(tabId);
   },
 
-  /** Reload active tab */
   async reload(): Promise<void> {
     const activeTab = useTabStore.getState().getActiveTab();
     if (!activeTab || !liveWebviews.has(activeTab.id)) return;
     await invoke("browser_reload", { id: activeTab.id }).catch(() => {});
   },
 
-  /** Stop loading active tab */
   async stop(): Promise<void> {
     const activeTab = useTabStore.getState().getActiveTab();
     if (!activeTab || !liveWebviews.has(activeTab.id)) return;
     await invoke("browser_stop", { id: activeTab.id }).catch(() => {});
   },
 
-  /** Go back in active tab history */
   async back(): Promise<void> {
     const activeTab = useTabStore.getState().getActiveTab();
     if (!activeTab || !liveWebviews.has(activeTab.id)) return;
     await invoke("browser_back", { id: activeTab.id }).catch(() => {});
   },
 
-  /** Go forward in active tab history */
   async forward(): Promise<void> {
     const activeTab = useTabStore.getState().getActiveTab();
     if (!activeTab || !liveWebviews.has(activeTab.id)) return;
     await invoke("browser_forward", { id: activeTab.id }).catch(() => {});
   },
 
-  /** Compute bounds from current sidebar state and update */
   computeBoundsFromSidebar(): void {
     const sidebarCollapsed = useSettingsStore.getState().sidebarCollapsed;
     const sidebarWidth = sidebarCollapsed

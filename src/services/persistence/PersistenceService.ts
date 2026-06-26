@@ -2,59 +2,78 @@
  * PersistenceService.ts
  * Orbit Frontend Persistence Coordinator
  *
- * Listens to browser events and records them to persistence.
- * BrowserFacade emits events. This service listens and acts.
- * No direct coupling between BrowserFacade and repositories.
+ * Sprint 5.3:
+ * Subscribes to WebviewSync as a NavigationObserver.
+ * When a navigation event fires, records a history entry.
  *
- * Sprint 4 Architecture:
+ * No direct coupling between WebviewSync and the persistence layer.
+ * WebviewSync only emits navigation events; this service decides
+ * what to persist.
  *
- *   BrowserFacade
- *       â†“ events
+ * Architecture:
+ *   WebviewSync
+ *       |
+ *       v  (NavigationObserver contract)
  *   PersistenceService
- *       â†“
- *   Repositories
- *       â†“ IPC
- *   Rust PersistenceService
- *       â†“
- *   SQLite
+ *       |
+ *       v
+ *   useHistoryStore.record()
+ *       |
+ *       v
+ *   HistoryRepository -> IPC -> Rust -> SQLite
  */
 
-import { browserFacade } from "@/browser/BrowserFacade";
+import { WebviewSync } from "@/browser/WebviewSync";
+import type {
+  NavigationEvent,
+  NavigationObserver,
+} from "@/browser/NavigationObserver";
 import { useHistoryStore } from "@/store/historyStore";
 
-class PersistenceServiceClass {
-  private unsubscribers: Array<() => void> = [];
+class PersistenceServiceClass implements NavigationObserver {
+  private unsubscribe: (() => void) | null = null;
   private initialized = false;
 
   /**
-   * Start listening to browser events.
-   * Call once on application startup.
+   * Start listening to navigation events.
+   * Idempotent â€” safe to call multiple times.
    */
   start(): void {
     if (this.initialized) return;
     this.initialized = true;
 
-    // Listen for completed navigations and record to history
-    const unsubTitle = browserFacade.on("title:update", (event) => {
-      const state = browserFacade.getSessionState(event.tabId);
-      if (!state?.url) return;
-      if (state.url === "about:blank") return;
-
-      useHistoryStore
-        .getState()
-        .record(state.url, event.title)
-        .catch(console.warn);
-    });
-
-    this.unsubscribers.push(unsubTitle);
-    console.warn("[PersistenceService] Started.");
+    this.unsubscribe = WebviewSync.subscribe(this);
+    console.warn("[PersistenceService] Subscribed to WebviewSync.");
   }
 
-  /** Stop listening to browser events. */
+  /**
+   * Stop listening.
+   */
   stop(): void {
-    this.unsubscribers.forEach((fn) => fn());
-    this.unsubscribers = [];
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
     this.initialized = false;
+  }
+
+  /**
+   * NavigationObserver implementation.
+   * Records the navigation to history.
+   */
+  onNavigate(event: NavigationEvent): void {
+    // Skip internal/blank URLs
+    if (!event.url) return;
+    if (event.url === "about:blank") return;
+    if (event.url.startsWith("data:")) return;
+    if (event.url.startsWith("javascript:")) return;
+
+    useHistoryStore
+      .getState()
+      .record(event.url, event.title)
+      .catch((err) => {
+        console.warn("[PersistenceService] history record failed", err);
+      });
   }
 }
 
