@@ -97,6 +97,7 @@ export function ShellLayout(): React.JSX.Element {
       useWorkspaceStore.getState().setInitialized(true);
 
       // Ensure at least one tab exists for the active workspace
+      // (initialize() handles this via restoreSnapshot, but belt & suspenders)
       const ws = useWorkspaceStore.getState().activeWorkspaceId;
       if (ws) {
         const wsTabs = useTabStore.getState().getWorkspaceTabs(ws);
@@ -139,6 +140,17 @@ export function ShellLayout(): React.JSX.Element {
     };
     window.addEventListener("orbit:shortcut", handler);
     return () => window.removeEventListener("orbit:shortcut", handler);
+  }, []);
+
+  // Sprint 5.4: Save all workspace snapshots on shutdown
+  // This ensures the active tab per workspace persists across restarts
+  useEffect(() => {
+    const handleBeforeUnload = (): void => {
+      // Fire-and-forget — beforeunload cannot await
+      workspaceFacade.saveAllSnapshots().catch(console.warn);
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
   if (!appReady || !settingsReady) {

@@ -21,6 +21,14 @@ interface TabState {
   getTab:       (id: string) => Tab | undefined;
   getActiveTab: () => Tab | undefined;
   getWorkspaceTabs: (workspaceId: string) => Tab[];
+
+  /**
+   * Atomically replace all tabs for a given workspace.
+   * Used by workspace snapshot restoration.
+   * Preserves tabs from OTHER workspaces.
+   * Does not enforce the "must keep at least one tab" rule — caller's responsibility.
+   */
+  replaceWorkspaceTabs: (workspaceId: string, newTabs: Tab[], newActiveTabId: string) => void;
 }
 
 function newTab(workspaceId: string, url = ""): Tab {
@@ -82,4 +90,15 @@ export const useTabStore = create<TabState>()((set, get) => ({
 
   getWorkspaceTabs: (workspaceId) =>
     get().tabs.filter((t) => t.workspaceId === workspaceId),
+
+  replaceWorkspaceTabs: (workspaceId, newTabs, newActiveTabId) => {
+    set((s) => {
+      // Keep all tabs from other workspaces, drop this workspace's tabs, append new ones
+      const otherTabs = s.tabs.filter((t) => t.workspaceId !== workspaceId);
+      return {
+        tabs:        [...otherTabs, ...newTabs],
+        activeTabId: newActiveTabId,
+      };
+    });
+  },
 }));
