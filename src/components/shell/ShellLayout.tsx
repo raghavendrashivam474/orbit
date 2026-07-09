@@ -1,3 +1,18 @@
+/**
+ * ShellLayout.tsx
+ * Orbit Application Shell
+ *
+ * Sprint 5.4.x:
+ * Removed the "HomePage as shell route" logic that duplicated
+ * NewTabPage and caused first-interaction loss on new tabs.
+ *
+ * Now:
+ *   - Shell pages (Settings, History, Bookmarks, Downloads, Workspaces)
+ *     render inside <Outlet /> above the hidden webview
+ *   - Everything else (including "/" and "/browse") shows BrowserView
+ *   - BrowserView shows either the webview OR NewTabPage
+ */
+
 import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { TitleBar } from "./TitleBar";
@@ -16,7 +31,8 @@ import { PersistenceService } from "@/services/persistence/PersistenceService";
 import { WebviewSync } from "@/browser/WebviewSync";
 import { LAYOUT } from "@/layout/LayoutConstants";
 
-const PURE_SHELL_ROUTES = [
+// Routes that show a shell page instead of the browser
+const SHELL_ROUTES = [
   "/settings",
   "/workspaces",
   "/history",
@@ -30,7 +46,7 @@ export function ShellLayout(): React.JSX.Element {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const { activeTabId, getActiveTab } = useTabStore();
+  const { activeTabId } = useTabStore();
   const { activeWorkspaceId } = useWorkspaceStore();
   const {
     initialize:       initSettings,
@@ -46,13 +62,9 @@ export function ShellLayout(): React.JSX.Element {
     ? LAYOUT.SIDEBAR_COLLAPSED
     : LAYOUT.SIDEBAR_EXPANDED;
 
-  const activeTab = getActiveTab();
-  const tabHasUrl = !!activeTab?.url;
-
-  const isPureShellPage = PURE_SHELL_ROUTES.includes(location.pathname);
-  const isHomePage      = location.pathname === "/";
-  const showHomePageUI  = isHomePage && !tabHasUrl;
-  const showShellPage   = isPureShellPage || showHomePageUI;
+  // Only the explicit shell routes cover the browser.
+  // "/" and "/browse" are browser routes — BrowserView + NewTabPage handle them.
+  const showShellPage = SHELL_ROUTES.includes(location.pathname);
 
   // Hide webview when on shell page, show when leaving
   useEffect(() => {
@@ -96,8 +108,6 @@ export function ShellLayout(): React.JSX.Element {
       await workspaceFacade.initialize().catch(console.warn);
       useWorkspaceStore.getState().setInitialized(true);
 
-      // Ensure at least one tab exists for the active workspace
-      // (initialize() handles this via restoreSnapshot, but belt & suspenders)
       const ws = useWorkspaceStore.getState().activeWorkspaceId;
       if (ws) {
         const wsTabs = useTabStore.getState().getWorkspaceTabs(ws);
@@ -117,7 +127,7 @@ export function ShellLayout(): React.JSX.Element {
     return () => PersistenceService.stop();
   }, []);
 
-  // Navigate to / when workspace switches
+  // Navigate to "/" (browser view) when workspace switches
   useEffect(() => {
     if (activeWorkspaceId && appReady) {
       navigate("/");
@@ -125,6 +135,7 @@ export function ShellLayout(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWorkspaceId]);
 
+  // Ctrl+T dispatches this event — go to browser view for the new tab
   useEffect(() => {
     const handler = (): void => navigate("/");
     window.addEventListener("orbit:navigate-home", handler);
@@ -142,11 +153,9 @@ export function ShellLayout(): React.JSX.Element {
     return () => window.removeEventListener("orbit:shortcut", handler);
   }, []);
 
-  // Sprint 5.4: Save all workspace snapshots on shutdown
-  // This ensures the active tab per workspace persists across restarts
+  // Save all workspace snapshots on shutdown
   useEffect(() => {
     const handleBeforeUnload = (): void => {
-      // Fire-and-forget — beforeunload cannot await
       workspaceFacade.saveAllSnapshots().catch(console.warn);
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -181,18 +190,20 @@ export function ShellLayout(): React.JSX.Element {
         />
 
         <main className="flex-1 overflow-hidden bg-[var(--bg)] relative">
+          {/* BrowserView is always mounted — it shows either the webview
+              or NewTabPage depending on whether the active tab has a URL.
+              This is the single source of truth for the "home" experience. */}
+          <div className="absolute inset-0" style={{ zIndex: 10 }}>
+            <BrowserView sidebarWidth={sidebarWidth} />
+          </div>
+
+          {/* Shell pages render on top of the (hidden) webview */}
           {showShellPage && (
             <div
               className="absolute inset-0 overflow-auto orbit-scrollbar bg-[var(--bg)]"
               style={{ zIndex: 20 }}
             >
               <Outlet />
-            </div>
-          )}
-
-          {!showShellPage && (
-            <div className="absolute inset-0" style={{ zIndex: 10 }}>
-              <BrowserView sidebarWidth={sidebarWidth} />
             </div>
           )}
         </main>

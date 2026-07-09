@@ -1,18 +1,33 @@
+/**
+ * useKeyboardShortcuts.ts
+ * Orbit Keyboard Shortcuts
+ *
+ * Uses tauri-plugin-global-shortcut for shortcut delivery because
+ * DOM keydown events do not bubble from child webviews to the shell.
+ *
+ * Known limitations on Windows with child webviews:
+ *   - Ctrl+L, Alt+Left, Alt+Right, Ctrl+[, Ctrl+] cannot be reliably
+ *     captured due to OS-level or webview-level interception.
+ *   - Users can use the toolbar buttons and click the address bar
+ *     with the mouse to achieve the same outcomes.
+ *
+ * Backlog: Sprint 6+ should investigate Windows raw input hooks or
+ *          menu accelerators as an alternative delivery mechanism.
+ */
+
 import { useEffect } from "react";
-import { register, isRegistered, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
+import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { useTabStore } from "@/store/tabStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { WebviewSync } from "@/browser/WebviewSync";
 
+// Only shortcuts that reliably work on Windows with child webviews.
 const SHORTCUTS = [
   "CmdOrCtrl+T",
   "CmdOrCtrl+W",
-  "CmdOrCtrl+L",
   "CmdOrCtrl+R",
   "CmdOrCtrl+K",
   "F5",
-  "Alt+Left",
-  "Alt+Right",
 ] as const;
 
 const ORBIT_SHORTCUT_EVENT = "orbit:shortcut";
@@ -41,22 +56,9 @@ export function useKeyboardShortcuts(): void {
           }
           break;
         }
-        case "CmdOrCtrl+L": {
-          const bar = document.querySelector<HTMLInputElement>(
-            "input[aria-label='Address bar']"
-          );
-          if (bar) { bar.focus(); bar.select(); }
-          break;
-        }
         case "CmdOrCtrl+R":
         case "F5":
           WebviewSync.reload().catch(() => {});
-          break;
-        case "Alt+Left":
-          WebviewSync.back().catch(() => {});
-          break;
-        case "Alt+Right":
-          WebviewSync.forward().catch(() => {});
           break;
       }
     };
@@ -67,10 +69,11 @@ export function useKeyboardShortcuts(): void {
 
   useEffect(() => {
     const setup = async (): Promise<void> => {
+      // Clear any stale registrations from previous sessions
+      await unregisterAll().catch(() => {});
+
       for (const shortcut of SHORTCUTS) {
         try {
-          const already = await isRegistered(shortcut);
-          if (already) continue;
           await register(shortcut, (event) => {
             if (event.state === "Pressed") {
               window.dispatchEvent(
@@ -78,13 +81,16 @@ export function useKeyboardShortcuts(): void {
               );
             }
           });
-        } catch {}
+        } catch {
+          // Silently skip if OS holds the shortcut. Toolbar buttons work.
+        }
       }
     };
     setup();
     return () => { unregisterAll().catch(() => {}); };
   }, []);
 
+  // Escape handled via DOM listener (only fires when inputs blur it correctly)
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === "Escape") WebviewSync.stop().catch(() => {});

@@ -1,6 +1,5 @@
 //! lib.rs
 //! Orbit Tauri Application Library
-//! Sprint 5: Workspace Engine integrated.
 
 mod browser;
 mod database;
@@ -25,10 +24,7 @@ use workspace::{
     models::*,
     service::WorkspaceService,
 };
-use tauri::{
-    menu::{Menu, MenuItem},
-    Emitter, Manager,
-};
+use tauri::{Emitter, Manager};
 
 static PERSISTENCE: OnceCell<PersistenceService> = OnceCell::new();
 static WORKSPACE:   OnceCell<WorkspaceService>   = OnceCell::new();
@@ -40,8 +36,6 @@ fn persistence() -> &'static PersistenceService {
 fn workspace_svc() -> &'static WorkspaceService {
     WORKSPACE.get().expect("[Orbit] WorkspaceService not initialized")
 }
-
-// â”€â”€ Window Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String {
@@ -72,8 +66,6 @@ async fn is_window_maximized(window: tauri::Window) -> Result<bool, String> {
     window.is_maximized().map_err(|e| e.to_string())
 }
 
-// â”€â”€ History Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 #[tauri::command]
 async fn history_record(url: String, title: String) -> Result<(), String> {
     persistence().record_navigation(&url, &title).await
@@ -98,8 +90,6 @@ async fn history_delete(id: String) -> Result<(), String> {
 async fn history_clear() -> Result<(), String> {
     persistence().clear_history().await
 }
-
-// â”€â”€ Bookmark Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 #[tauri::command]
 async fn bookmark_add(url: String, title: String) -> Result<BookmarkEntry, String> {
@@ -136,8 +126,6 @@ async fn bookmark_delete_by_url(url: String) -> Result<(), String> {
     persistence().delete_bookmark_by_url(&url).await
 }
 
-// â”€â”€ Session Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 #[tauri::command]
 async fn session_save(active_tab: String, tabs: Vec<TabToSave>) -> Result<String, String> {
     persistence().save_session(&active_tab, tabs).await
@@ -147,8 +135,6 @@ async fn session_save(active_tab: String, tabs: Vec<TabToSave>) -> Result<String
 async fn session_load() -> Result<Option<FullSession>, String> {
     persistence().load_latest_session().await
 }
-
-// â”€â”€ Settings Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 #[tauri::command]
 async fn settings_get(key: String) -> Result<Option<String>, String> {
@@ -164,8 +150,6 @@ async fn settings_set(key: String, value: String) -> Result<(), String> {
 async fn settings_all() -> Result<Vec<(String, String)>, String> {
     persistence().get_all_settings().await
 }
-
-// â”€â”€ Workspace Commands â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 #[tauri::command]
 async fn workspace_list() -> Result<Vec<WorkspaceEntry>, String> {
@@ -206,8 +190,6 @@ async fn workspace_save_tabs(input: SaveWorkspaceTabsInput) -> Result<(), String
 async fn workspace_load_tabs(workspace_id: String) -> Result<Vec<WorkspaceTabEntry>, String> {
     workspace_svc().load_tabs(&workspace_id).await
 }
-
-// â”€â”€ Application Entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -297,44 +279,6 @@ pub fn run() {
                     if let Some(window) = handle.get_webview_window("main") {
                         let _ = window.emit("orbit-settings-loaded", settings);
                     }
-                }
-            });
-
-            let new_tab = MenuItem::with_id(
-                app, "new_tab", "New Tab", true, Some("CmdOrCtrl+T"),
-            ).map_err(|e| e.to_string())?;
-
-            let close_tab = MenuItem::with_id(
-                app, "close_tab", "Close Tab", true, Some("CmdOrCtrl+W"),
-            ).map_err(|e| e.to_string())?;
-
-            let focus_address = MenuItem::with_id(
-                app, "focus_address", "Focus Address", true, Some("CmdOrCtrl+L"),
-            ).map_err(|e| e.to_string())?;
-
-            let reload_page = MenuItem::with_id(
-                app, "reload_page", "Reload", true, Some("CmdOrCtrl+R"),
-            ).map_err(|e| e.to_string())?;
-
-            let command_palette = MenuItem::with_id(
-                app, "command_palette", "Command Palette", true, Some("CmdOrCtrl+K"),
-            ).map_err(|e| e.to_string())?;
-
-            let menu = Menu::with_items(app, &[
-                &new_tab,
-                &close_tab,
-                &focus_address,
-                &reload_page,
-                &command_palette,
-            ]).map_err(|e| e.to_string())?;
-
-            app.set_menu(menu).map_err(|e| e.to_string())?;
-
-            let handle2 = app.handle().clone();
-            app.on_menu_event(move |_app, event| {
-                let id = event.id().0.as_str().to_string();
-                if let Some(window) = handle2.get_webview_window("main") {
-                    let _ = window.emit("orbit-shortcut", id);
                 }
             });
 

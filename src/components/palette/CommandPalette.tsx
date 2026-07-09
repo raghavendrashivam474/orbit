@@ -1,17 +1,24 @@
 /**
  * CommandPalette.tsx
- * Orbit Command Palette - Sprint 4 Foundation
+ * Orbit Command Palette
  *
  * Triggered by Ctrl+K.
- * Sprint 4: Navigation commands only.
- * Sprint 5+: AI commands, workspace commands, search.
+ * Provides navigation shortcuts and history access.
+ *
+ * Sprint 5.4.z fix:
+ *   - Uses new tabStore.addTab(workspaceId, url?) signature
+ *   - Uses WebviewSync.navigate for actual page loads
+ *   - Escape only closes palette when palette is open (does not
+ *     interfere with the shell's global Escape handler)
  */
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Clock, Bookmark, Settings, Plus } from "lucide-react";
 import { useTabStore } from "@/store/tabStore";
+import { useWorkspaceStore } from "@/store/workspaceStore";
 import { useHistoryStore } from "@/store/historyStore";
+import { WebviewSync } from "@/browser/WebviewSync";
 
 interface Command {
   id:       string;
@@ -27,12 +34,31 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JSX.Element | null {
-  const [query, setQuery]           = useState("");
-  const [selected, setSelected]     = useState(0);
-  const inputRef                    = useRef<HTMLInputElement>(null);
-  const navigate                    = useNavigate();
-  const { addTab }                  = useTabStore();
+  const [query, setQuery]       = useState("");
+  const [selected, setSelected] = useState(0);
+  const inputRef                = useRef<HTMLInputElement>(null);
+  const navigate                = useNavigate();
+
   const { entries: history, search: searchHistory } = useHistoryStore();
+
+  // ── Command builders ────────────────────────────────────
+
+  /** Open a URL in a fresh tab within the active workspace. */
+  const openInNewTab = (url: string): void => {
+    const ws = useWorkspaceStore.getState().activeWorkspaceId;
+    if (!ws) return;
+
+    // Create the tab, then navigate its (yet-to-be-created) webview.
+    // WebviewSync.navigate reads the active tab from the store, so we
+    // must let the state settle before calling it.
+    useTabStore.getState().addTab(ws);
+    navigate("/");
+
+    // Defer navigation until after the tab is registered as active
+    setTimeout(() => {
+      WebviewSync.navigate(url).catch(console.warn);
+    }, 0);
+  };
 
   const staticCommands: Command[] = [
     {
@@ -40,7 +66,14 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       label:    "New Tab",
       category: "Actions",
       icon:     <Plus size={14} strokeWidth={2} />,
-      action:   () => { addTab(); onClose(); },
+      action:   () => {
+        const ws = useWorkspaceStore.getState().activeWorkspaceId;
+        if (ws) {
+          useTabStore.getState().addTab(ws);
+          navigate("/");
+        }
+        onClose();
+      },
     },
     {
       id:       "history",
@@ -71,7 +104,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     category: "Recent",
     icon:     <Clock size={14} strokeWidth={2} />,
     action:   () => {
-      addTab({ url: entry.url, title: entry.title });
+      openInNewTab(entry.url);
       onClose();
     },
   }));
@@ -82,6 +115,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       )
     : [...staticCommands, ...historyCommands];
 
+  // ── Effects ─────────────────────────────────────────────
+
+  // Reset state and focus input when palette opens
   useEffect(() => {
     if (open) {
       setQuery("");
@@ -90,20 +126,31 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     }
   }, [open]);
 
+  // Search history as the user types
   useEffect(() => {
     if (query) {
       searchHistory(query).catch(console.warn);
     }
   }, [query, searchHistory]);
 
+  // Reset selection when query changes
   useEffect(() => {
     setSelected(0);
   }, [query]);
 
+  // Keyboard navigation within the palette
+  //
+  // Note: Escape stops propagation so the shell's global Escape
+  // (which calls WebviewSync.stop) does not also fire.
   useEffect(() => {
+    if (!open) return;
+
     const handler = (e: KeyboardEvent): void => {
-      if (!open) return;
-      if (e.key === "Escape") { onClose(); return; }
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+        return;
+      }
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelected((s) => Math.min(s + 1, allCommands.length - 1));
@@ -117,8 +164,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
         allCommands[selected]?.action();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+
+    // Capture phase so palette handles Escape before shell does
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
   }, [open, allCommands, selected, onClose]);
 
   if (!open) return null;
