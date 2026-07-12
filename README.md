@@ -1,28 +1,28 @@
 ﻿# 🌍 Orbit
 
-> **A context-first native workspace browser designed to preserve, organize, and eventually understand digital work.**
+> **A context-first native workspace browser designed to preserve, organize, and progressively understand digital work.**
 
-Orbit is a native desktop browser that reimagines browsing around **workspaces, context, and continuity** rather than windows and isolated tabs.
+Orbit is a native desktop browser that reimagines browsing around **workspaces, context, and continuity** instead of windows and isolated tabs.
 
 Traditional browsers remember pages.
 
-Orbit is designed to remember **work**.
+Orbit remembers **work**.
 
-Instead of organizing browsing around temporary tabs, Orbit organizes digital work around persistent workspaces, active context, sessions, and long-term knowledge.
+Rather than treating tabs as the primary unit of browsing, Orbit models browsing around persistent workspaces, structured context, and long-term project continuity.
 
-Its long-term vision is to become an intelligent workspace companion that understands projects while keeping users in complete control of their data.
+Its long-term vision is to become an intelligent workspace companion that helps users organize, retrieve, and eventually understand their digital work while keeping complete ownership of their data.
 
 ---
 
 # 🚀 Current Status
 
-**Version:** **v0.5.4z**
+**Version:** **v0.6.0**
 
-**Stage:** Browser Foundation Complete
+**Stage:** Context Engine Foundation Complete
 
-Orbit has successfully completed its first major engineering milestone.
+Orbit has completed its first two major architectural milestones.
 
-The browser now provides:
+Current capabilities include:
 
 - Native desktop shell
 - Stable browser engine
@@ -37,14 +37,18 @@ The browser now provides:
 - SQLite persistence
 - Navigation Observer architecture
 - Deterministic WebView synchronization
+- Structured Context Engine
+- Global Page identity
+- Workspace-scoped Page Visits
+- Context Query API
+- Workspace timeline projection
+- Lexical context search
 - Layered Rust + TypeScript architecture
 - Architecture Decision Records (ADRs)
-- Workspace context restoration
-- Production-level browser stabilization
 
-The Browser Foundation is now considered **feature complete and architecturally stable**.
+Orbit now understands the structural relationships between browsing activity instead of merely storing browser state.
 
-Future development now shifts from browser infrastructure toward browser intelligence.
+The next phase focuses on turning structured context into practical intelligence.
 
 ---
 
@@ -58,7 +62,7 @@ Orbit explores a different question:
 
 > **"Can a browser understand what I'm working on?"**
 
-The long-term goal is to organize digital work around:
+Orbit aims to organize digital work around:
 
 - Workspaces
 - Projects
@@ -69,19 +73,17 @@ The long-term goal is to organize digital work around:
 - Collections
 - Intent
 
-rather than disconnected browser tabs.
+instead of disconnected browser tabs.
 
 ---
 
 # 🧭 Product Philosophy
 
-Orbit is built around several long-term principles.
-
 ## 🏠 Workspaces over Windows
 
 Windows are temporary.
 
-Workspaces represent real projects and long-term contexts.
+Workspaces represent long-term projects and meaningful contexts.
 
 ---
 
@@ -89,9 +91,9 @@ Workspaces represent real projects and long-term contexts.
 
 Tabs are disposable.
 
-Context is what users actually want to preserve.
+Context is durable.
 
-Orbit restores not only pages, but the complete working state behind those pages.
+Orbit preserves the complete working context behind browsing activity rather than simply restoring pages.
 
 ---
 
@@ -99,7 +101,7 @@ Orbit restores not only pages, but the complete working state behind those pages
 
 Every architectural layer is completed before introducing dependent capabilities.
 
-Long-term scalability always takes priority over short-term feature velocity.
+Long-term maintainability always takes priority over feature velocity.
 
 ---
 
@@ -107,7 +109,7 @@ Long-term scalability always takes priority over short-term feature velocity.
 
 Native WebViews are synchronized explicitly through dedicated lifecycle managers.
 
-Rendering is never left to implicit UI state.
+Rendering is never driven by implicit UI state.
 
 ---
 
@@ -115,17 +117,27 @@ Rendering is never left to implicit UI state.
 
 Every domain has one authoritative owner.
 
-Synchronization always flows outward from the source of truth.
+Derived layers synchronize from that source rather than maintaining duplicated state.
 
-Never sideways.
+---
+
+## 👁 Observation Before Intelligence
+
+Orbit first observes.
+
+Then structures.
+
+Only then attempts to understand.
+
+Future intelligence features will consume structured context instead of raw browser state.
 
 ---
 
 ## 💾 Local First
 
-User information remains local by default.
+User information remains local whenever practical.
 
-Cloud synchronization is an optional future capability.
+Cloud synchronization remains an optional future enhancement.
 
 ---
 
@@ -133,23 +145,15 @@ Cloud synchronization is an optional future capability.
 
 Future intelligence capabilities are designed around local execution whenever practical.
 
-Users should never lose ownership of their information.
+Users retain ownership of their information.
 
 ---
 
 ## ⚡ Performance First
 
-Orbit favors predictable architecture over unnecessary abstraction.
+Orbit favors deterministic architecture over unnecessary abstraction.
 
-Every feature should preserve responsiveness and deterministic behavior.
-
----
-
-## 🧩 Progressive Intelligence
-
-Orbit should become smarter gradually.
-
-Understanding should emerge naturally from user context rather than intrusive automation.
+Every feature must preserve responsiveness and predictable behavior.
 
 ---
 
@@ -162,16 +166,15 @@ Orbit follows:
 - Strict TypeScript
 - Rust-first persistence
 - Observer-driven synchronization
-- Explicit native lifecycle management
+- Deterministic native lifecycle management
+- Investigation before implementation
 - Incremental architectural evolution
 - Architecture Decision Records (ADRs)
-- Investigation before implementation
-- Minimal fixes over broad rewrites
 - Structured logging
 - Database migrations
 - Automated linting & formatting
 - Git hooks
-- Sprint-based incremental development
+- Sprint-based development
 
 ---
 
@@ -202,20 +205,20 @@ Orbit follows:
 - IPC bridge
 - Zustand
 - Tailwind CSS
-- Development tooling
+- Tooling
 - ADR-0001
 
 ---
 
 ## ✅ Sprint 2 — Orbit Shell
 
-- Custom title bar
+- Native desktop shell
+- Title bar
 - Sidebar
 - Toolbar
 - Address bar
-- Tab interface
+- Tabs
 - Theme support
-- Layout architecture
 - ADR-0002
 
 ---
@@ -236,12 +239,11 @@ Orbit follows:
 ## ✅ Sprint 4 — Persistence Layer
 
 - SQLite + sqlx
-- Repository architecture
 - History
 - Bookmarks
 - Session persistence
 - Settings persistence
-- Database migrations
+- Repository architecture
 - ADR-0005
 - ADR-0006
 
@@ -249,25 +251,24 @@ Orbit follows:
 
 ## ✅ Sprint 5 — Workspace Engine
 
-- Workspace architecture
 - Workspace CRUD
 - Workspace switching
-- Workspace sidebar
-- Per-workspace tab isolation
+- Workspace snapshots
 - Active workspace persistence
-- Emoji & color customization
+- Per-workspace tabs
+- Active tab restoration
+- Workspace sidebar
 - ADR-0007
 - ADR-0008
 
 ---
 
-## ✅ Sprint 5.1 — Architecture Refactor
+## ✅ Sprint 5.1 — Browser Architecture Refactor
 
-- WebviewSync lifecycle manager
-- Stable renderer ownership
-- Imperative WebView orchestration
-- Deterministic synchronization
-- Simplified browser lifecycle
+- WebviewSync
+- Deterministic renderer ownership
+- Imperative native orchestration
+- Stable browser lifecycle
 
 ---
 
@@ -275,56 +276,43 @@ Orbit follows:
 
 - Sidebar refinement
 - Workspace hierarchy improvements
-- Enhanced desktop UX
-- UI consistency improvements
+- Improved desktop UX
+- UI consistency
 
 ---
 
-## ✅ Sprint 5.3 — Browser Foundation Stabilization
+## ✅ Sprint 5.3 — Browser Stabilization
 
-- Root-cause investigations
-- NavigationObserver architecture
+- NavigationObserver
 - Observer-driven persistence
 - History restoration
 - Browser stabilization
 
 ---
 
-## ✅ Sprint 5.4 — Workspace Context Preservation
+## ✅ Sprint 5.4 — Context Preservation
 
 - Workspace snapshots
 - Active tab restoration
-- Persistent tab ordering
-- Workspace restoration on restart
-- Atomic workspace replacement
-- Complete Workspace Engine
+- Workspace restart recovery
+- Stable workspace replacement
+- Browser foundation completed
 
 ---
 
-## ✅ Sprint 5.4.x — Browser Investigation
+## ✅ Sprint 6 — Context Engine Foundation
 
-- Duplicate HomePage removal
-- First interaction bug investigation
-- Browser lifecycle improvements
-- Startup stabilization
-
----
-
-## ✅ Sprint 5.4.y — Platform Investigation
-
-- Keyboard shortcut investigation
-- Native platform limitation analysis
-- Browser command routing improvements
-- Architectural documentation updates
-
----
-
-## ✅ Sprint 5.4.z — Browser Stabilization
-
-- Command Palette stabilization
-- Shortcut system refinement
-- Browser lifecycle verification
-- Final Browser Foundation stabilization
+- Global Page identity
+- Workspace-scoped Page Visits
+- ContextCaptureService
+- ContextQueryService
+- URL normalization
+- Context persistence
+- Lexical context search
+- Timeline projection
+- Context architecture
+- ADR-0009
+- ADR-0010
 
 ---
 
@@ -343,8 +331,8 @@ Workspace Layer
 │
 ├── WorkspaceFacade
 ├── Workspace Manager
-├── Workspace Snapshot
-└── Workspace Store
+├── Workspace Store
+└── Workspace Snapshot
 │
 ▼
 Browser Layer
@@ -352,29 +340,32 @@ Browser Layer
 ├── Navigation
 ├── WebviewSync
 ├── NavigationObserver
-├── Browser Store
 └── Native WebViews
 │
 ▼
-Context Layer
+Context Engine
 │
-├── Active Context
-├── Session State
-├── Snapshot Restoration
-└── Context Preservation
+├── ContextCaptureService
+├── ContextQueryService
+├── Page Repository
+├── PageVisit Repository
+├── Page Identity
+└── Workspace Context
 │
 ▼
 Persistence Layer
 │
+├── Rust Services
 ├── Rust Repositories
 ├── TypeScript Repositories
-├── Persistence Services
 └── SQLite (sqlx)
 ```
 
 Every layer owns exactly one responsibility.
 
-Together they preserve user context while maintaining deterministic synchronization.
+Browser activity flows into the Context Engine.
+
+Future intelligence consumes the Context Engine.
 
 ---
 
@@ -382,38 +373,46 @@ Together they preserve user context while maintaining deterministic synchronizat
 
 ## ✅ Milestone 1 — Browser Foundation
 
-**Status:** Complete
+Completed.
 
-Includes:
-
-- Browser Shell
-- Browser Core
-- Persistence Layer
+- Browser shell
+- Browser core
+- Persistence
 - Workspace Engine
-- Context Preservation
-- Browser Stabilization
-- Production Hardening
+- Browser stabilization
 
 ---
 
-## 🟨 Milestone 2 — Intelligence Foundation _(Current Focus)_
+## ✅ Milestone 2 — Context Foundation
+
+Completed.
+
+- Context Engine
+- Page identity
+- Page visits
+- Workspace context
+- Context search
+- Timeline projection
+
+---
+
+## 🟨 Milestone 3 — Intelligence Foundation
+
+Current Focus
 
 Planned capabilities:
 
+- Real metadata extraction
 - Page understanding
 - Workspace understanding
 - Semantic search
-- Workspace-aware history
-- Workspace-aware bookmarks
 - Intelligent Command Palette
 - Local AI memory
-- Workspace intelligence engine
+- Workspace intelligence
 
 ---
 
-## 🟩 Milestone 3 — Productivity Layer
-
-Planned capabilities:
+## 🟩 Milestone 4 — Productivity Layer
 
 - Notes
 - Downloads
@@ -421,61 +420,56 @@ Planned capabilities:
 - Collections
 - Smart organization
 - Advanced search
-- Workspace tools
 
 ---
 
-## 🟪 Milestone 4 — Orbit + RaghavOS
-
-Planned capabilities:
+## 🟪 Milestone 5 — Orbit + RaghavOS
 
 - Shared sessions
 - Native automation
-- Cross-application workflows
 - Workspace synchronization
-- Deep desktop integration
+- Cross-application workflows
 
 ---
 
-## 🟥 Milestone 5 — Orbit Ecosystem
-
-Planned capabilities:
+## 🟥 Milestone 6 — Orbit Ecosystem
 
 - Plugin SDK
 - Themes
 - Marketplace
 - Community extensions
-- Ecosystem APIs
 
 ---
 
-## 🌍 Milestone 6 — Cross-Platform Expansion
+## 🌍 Milestone 7 — Cross-Platform Expansion
 
-Planned capabilities:
-
-- macOS support
-- Linux support
-- Platform abstraction layer
-- Native platform integrations
+- macOS
+- Linux
+- Platform abstraction
+- Native integrations
 - Cross-platform CI/CD
 
 ---
 
 # 📊 Current State
 
-Orbit's Browser Foundation is complete.
+Orbit has successfully completed:
 
-The browser is considered architecturally stable and suitable for continued feature development.
+- Browser Foundation
+- Workspace Engine
+- Context Engine
 
-Known accepted platform limitations include:
+The browser is now capable of preserving, structuring, and querying browsing context.
 
-- Windows interception of certain global keyboard shortcuts
-- Native child WebView title limitations
+Future work focuses on understanding context rather than collecting it.
+
+Known platform limitations remain:
+
+- Child WebView title extraction
+- Native metadata extraction
 - Operating-system controlled shortcut behavior
 
-These are documented platform constraints rather than unresolved application bugs.
-
-Future development focuses on browser intelligence rather than browser infrastructure.
+These are platform constraints rather than architectural limitations.
 
 ---
 
@@ -488,16 +482,16 @@ Orbit maintains:
 - Domain-Driven Design
 - Rust-first persistence
 - Observer-driven synchronization
+- Context-first architecture
 - Deterministic native resource management
-- Architecture Decision Records (ADRs)
+- ADRs
 - Structured logging
 - Database migrations
-- Automated linting
-- Automated formatting
+- Automated linting & formatting
 - Git hooks
-- Sprint-based incremental development
+- Sprint-based development
 - Clean Git history
-- Comprehensive technical documentation
+- Comprehensive documentation
 
 ---
 
@@ -511,21 +505,19 @@ MIT License
 
 Every sprint answered one architectural question.
 
-| Sprint       | Architectural Question                             |
-| ------------ | -------------------------------------------------- |
-| Sprint 1     | Can Orbit exist?                                   |
-| Sprint 2     | Can Orbit feel like Orbit?                         |
-| Sprint 3     | Can Orbit browse?                                  |
-| Sprint 4     | Can Orbit remember?                                |
-| Sprint 5     | Can Orbit organize?                                |
-| Sprint 5.1   | Can Orbit remain deterministic?                    |
-| Sprint 5.2   | Can Orbit feel polished?                           |
-| Sprint 5.3   | Can Orbit recover from architectural change?       |
-| Sprint 5.4   | Can Orbit preserve context?                        |
-| Sprint 5.4.x | Can Orbit respond immediately?                     |
-| Sprint 5.4.y | Can Orbit work within platform constraints?        |
-| Sprint 5.4.z | Can Orbit stabilize after architectural evolution? |
+| Sprint     | Question                                     |
+| ---------- | -------------------------------------------- |
+| Sprint 1   | Can Orbit exist?                             |
+| Sprint 2   | Can Orbit feel like Orbit?                   |
+| Sprint 3   | Can Orbit browse?                            |
+| Sprint 4   | Can Orbit remember?                          |
+| Sprint 5   | Can Orbit organize?                          |
+| Sprint 5.1 | Can Orbit remain deterministic?              |
+| Sprint 5.2 | Can Orbit feel polished?                     |
+| Sprint 5.3 | Can Orbit recover from architectural change? |
+| Sprint 5.4 | Can Orbit preserve context?                  |
+| Sprint 6   | Can Orbit structure context?                 |
 
-The next architectural chapter begins with a new question:
+The next architectural chapter begins with:
 
-> **Sprint 6 — Can Orbit understand?**
+> **Sprint 7 — Can Orbit understand context?**
