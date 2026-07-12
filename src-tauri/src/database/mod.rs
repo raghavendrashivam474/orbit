@@ -50,6 +50,7 @@ async fn run_migrations(pool: &DbPool) -> Result<(), String> {
         (include_str!("../../migrations/0004_sessions.sql"),  4, "sessions"),
         (include_str!("../../migrations/0005_settings.sql"),  5, "settings"),
         (include_str!("../../migrations/0006_workspaces.sql"),6, "workspaces"),
+        (include_str!("../../migrations/0007_context.sql"),   7, "context"),
     ];
 
     for (sql, version, name) in migrations {

@@ -1,7 +1,11 @@
 //! lib.rs
 //! Orbit Tauri Application Library
+//!
+//! Sprint 6: Context Engine registered as a peer service alongside
+//! PersistenceService and WorkspaceService.
 
 mod browser;
+mod context;
 mod database;
 mod models;
 mod repositories;
@@ -16,6 +20,11 @@ use browser::{
     browser_stop, browser_update_bounds,
 };
 
+use context::{
+    models::{PageEntry, PageVisitEntry, RecordNavigationInput, UpdatePageMetadataInput},
+    service::ContextService,
+};
+
 use models::{bookmark::BookmarkEntry, history::HistoryEntry, session::FullSession};
 use once_cell::sync::OnceCell;
 use services::persistence::PersistenceService;
@@ -28,6 +37,7 @@ use tauri::{Emitter, Manager};
 
 static PERSISTENCE: OnceCell<PersistenceService> = OnceCell::new();
 static WORKSPACE:   OnceCell<WorkspaceService>   = OnceCell::new();
+static CONTEXT:     OnceCell<ContextService>     = OnceCell::new();
 
 fn persistence() -> &'static PersistenceService {
     PERSISTENCE.get().expect("[Orbit] PersistenceService not initialized")
@@ -36,6 +46,12 @@ fn persistence() -> &'static PersistenceService {
 fn workspace_svc() -> &'static WorkspaceService {
     WORKSPACE.get().expect("[Orbit] WorkspaceService not initialized")
 }
+
+fn context_svc() -> &'static ContextService {
+    CONTEXT.get().expect("[Orbit] ContextService not initialized")
+}
+
+// ── Window Commands ─────────────────────────────────────────
 
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String {
@@ -66,6 +82,8 @@ async fn is_window_maximized(window: tauri::Window) -> Result<bool, String> {
     window.is_maximized().map_err(|e| e.to_string())
 }
 
+// ── History Commands ────────────────────────────────────────
+
 #[tauri::command]
 async fn history_record(url: String, title: String) -> Result<(), String> {
     persistence().record_navigation(&url, &title).await
@@ -90,6 +108,8 @@ async fn history_delete(id: String) -> Result<(), String> {
 async fn history_clear() -> Result<(), String> {
     persistence().clear_history().await
 }
+
+// ── Bookmark Commands ───────────────────────────────────────
 
 #[tauri::command]
 async fn bookmark_add(url: String, title: String) -> Result<BookmarkEntry, String> {
@@ -126,6 +146,8 @@ async fn bookmark_delete_by_url(url: String) -> Result<(), String> {
     persistence().delete_bookmark_by_url(&url).await
 }
 
+// ── Session Commands ────────────────────────────────────────
+
 #[tauri::command]
 async fn session_save(active_tab: String, tabs: Vec<TabToSave>) -> Result<String, String> {
     persistence().save_session(&active_tab, tabs).await
@@ -135,6 +157,8 @@ async fn session_save(active_tab: String, tabs: Vec<TabToSave>) -> Result<String
 async fn session_load() -> Result<Option<FullSession>, String> {
     persistence().load_latest_session().await
 }
+
+// ── Settings Commands ───────────────────────────────────────
 
 #[tauri::command]
 async fn settings_get(key: String) -> Result<Option<String>, String> {
@@ -150,6 +174,8 @@ async fn settings_set(key: String, value: String) -> Result<(), String> {
 async fn settings_all() -> Result<Vec<(String, String)>, String> {
     persistence().get_all_settings().await
 }
+
+// ── Workspace Commands ──────────────────────────────────────
 
 #[tauri::command]
 async fn workspace_list() -> Result<Vec<WorkspaceEntry>, String> {
@@ -190,6 +216,59 @@ async fn workspace_save_tabs(input: SaveWorkspaceTabsInput) -> Result<(), String
 async fn workspace_load_tabs(workspace_id: String) -> Result<Vec<WorkspaceTabEntry>, String> {
     workspace_svc().load_tabs(&workspace_id).await
 }
+
+// ── Context Commands (Sprint 6) ─────────────────────────────
+
+#[tauri::command]
+async fn context_record_navigation(input: RecordNavigationInput) -> Result<String, String> {
+    context_svc().record_navigation(input).await
+}
+
+#[tauri::command]
+async fn context_update_page_metadata(
+    input: UpdatePageMetadataInput,
+) -> Result<Option<PageEntry>, String> {
+    context_svc().update_page_metadata(input).await
+}
+
+#[tauri::command]
+async fn context_recent_workspace_pages(
+    workspace_id: String,
+    limit: i64,
+) -> Result<Vec<PageEntry>, String> {
+    context_svc().get_recent_workspace_pages(&workspace_id, limit).await
+}
+
+#[tauri::command]
+async fn context_workspace_pages(workspace_id: String) -> Result<Vec<PageEntry>, String> {
+    context_svc().get_workspace_pages(&workspace_id).await
+}
+
+#[tauri::command]
+async fn context_page_visits(page_id: String) -> Result<Vec<PageVisitEntry>, String> {
+    context_svc().get_page_visits(&page_id).await
+}
+
+#[tauri::command]
+async fn context_workspace_visits(
+    workspace_id: String,
+    limit: i64,
+) -> Result<Vec<PageVisitEntry>, String> {
+    context_svc().get_workspace_visits(&workspace_id, limit).await
+}
+
+#[tauri::command]
+async fn context_search_pages(
+    query: String,
+    workspace_id: Option<String>,
+    limit: i64,
+) -> Result<Vec<PageEntry>, String> {
+    context_svc()
+        .search_pages(&query, workspace_id.as_deref(), limit)
+        .await
+}
+
+// ── Application Entry ───────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -242,6 +321,13 @@ pub fn run() {
             workspace_activate,
             workspace_save_tabs,
             workspace_load_tabs,
+            context_record_navigation,
+            context_update_page_metadata,
+            context_recent_workspace_pages,
+            context_workspace_pages,
+            context_page_visits,
+            context_workspace_visits,
+            context_search_pages,
         ])
         .setup(|app| {
             let version = app.package_info().version.to_string();
@@ -264,16 +350,20 @@ pub fn run() {
                     .set(PersistenceService::new(pool.clone()))
                     .expect("[Orbit] Failed to set PersistenceService");
 
-                let ws_service = WorkspaceService::new(pool);
+                let ws_service = WorkspaceService::new(pool.clone());
                 ws_service.ensure_default().await
                     .expect("[Orbit] Failed to ensure default workspace");
-
                 WORKSPACE
                     .set(ws_service)
                     .expect("[Orbit] Failed to set WorkspaceService");
 
+                CONTEXT
+                    .set(ContextService::new(pool))
+                    .expect("[Orbit] Failed to set ContextService");
+
                 println!("[Orbit] Persistence layer ready.");
                 println!("[Orbit] Workspace engine ready.");
+                println!("[Orbit] Context engine ready.");
 
                 if let Ok(settings) = PERSISTENCE.get().unwrap().get_all_settings().await {
                     if let Some(window) = handle.get_webview_window("main") {

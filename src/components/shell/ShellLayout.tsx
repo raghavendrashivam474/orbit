@@ -28,6 +28,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useWorkspaceStore } from "@/store/workspaceStore";
 import { workspaceFacade } from "@/workspace/WorkspaceFacade";
 import { PersistenceService } from "@/services/persistence/PersistenceService";
+import { ContextCaptureService } from "@/context";
 import { WebviewSync } from "@/browser/WebviewSync";
 import { LAYOUT } from "@/layout/LayoutConstants";
 
@@ -124,7 +125,9 @@ export function ShellLayout(): React.JSX.Element {
 
   useEffect(() => {
     PersistenceService.start();
+    ContextCaptureService.start();
     return () => PersistenceService.stop();
+      ContextCaptureService.stop();
   }, []);
 
   // Navigate to "/" (browser view) when workspace switches
